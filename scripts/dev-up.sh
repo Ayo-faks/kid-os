@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bring up (or refresh) the CareOS local stack via docker compose.
+# Bring up (or refresh) the Kid-OS local stack via Docker Compose.
 #
 # Usage:
 #   scripts/dev-up.sh                 # build (if needed) + start everything detached
@@ -74,7 +74,8 @@ print_status() {
   Keycloak admin           https://localhost/keycloak/   (admin / see .env)
   Temporal UI              https://localhost/temporal/
   Grafana                  https://localhost/grafana/    (admin / see .env)
-  MinIO console            https://localhost/minio/      (careos / see .env)
+  MinIO S3 API             https://localhost/minio/
+  MinIO console            https://localhost/minio-console/ (careos / see .env)
 
 [dev-up] Seeded users (all password: careos-dev-password):
   manager@careos.local            (manager)
