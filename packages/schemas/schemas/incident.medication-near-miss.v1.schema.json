@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://careos.local/schemas/incident.medication-near-miss.v1.json",
+  "title": "Medication Near-Miss",
+  "type": "object",
+  "required": [
+    "residentId",
+    "occurredAt",
+    "medication",
+    "nearMissType",
+    "summary",
+    "harmCausedToResident",
+    "correctiveAction"
+  ],
+  "properties": {
+    "residentId": { "type": "string", "format": "uuid", "title": "Resident", "x-mandatory": true },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "title": "When did it happen?",
+      "x-mandatory": true
+    },
+    "medication": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 200, "title": "Medication" },
+        "doseExpected": { "type": "string", "maxLength": 80, "title": "Dose expected" },
+        "doseActual": { "type": "string", "maxLength": 80, "title": "Dose actual" },
+        "route": { "type": "string", "enum": ["oral", "topical", "inhaled", "injection", "other"] }
+      },
+      "x-mandatory": true
+    },
+    "nearMissType": {
+      "type": "string",
+      "enum": [
+        "wrong_dose",
+        "wrong_time",
+        "wrong_medication",
+        "missed_dose",
+        "wrong_resident",
+        "expired_stock",
+        "other"
+      ],
+      "title": "Type of near-miss",
+      "x-mandatory": true
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000,
+      "title": "What happened?",
+      "x-mandatory": true
+    },
+    "harmCausedToResident": {
+      "type": "string",
+      "enum": ["none", "minor", "moderate", "significant"],
+      "title": "Harm caused to resident",
+      "x-mandatory": true
+    },
+    "correctiveAction": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 2000,
+      "title": "Corrective action taken",
+      "x-mandatory": true
+    },
+    "reportedToPharmacy": { "type": "boolean", "default": false },
+    "reportedToGp": { "type": "boolean", "default": false }
+  },
+  "additionalProperties": false
+}

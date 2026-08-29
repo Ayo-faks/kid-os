@@ -1,0 +1,459 @@
+{
+  "realm": "careos",
+  "displayName": "CareOS",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "support_worker",
+        "description": "Frontline care worker with resident-scoped access."
+      },
+      {
+        "name": "key_worker",
+        "description": "Named worker responsible for resident follow-up."
+      },
+      {
+        "name": "shift_lead",
+        "description": "Shift lead with handover and escalation permissions."
+      },
+      {
+        "name": "manager",
+        "description": "Home manager with approval permissions."
+      },
+      {
+        "name": "safeguarding_lead",
+        "description": "Safeguarding lead for high-risk review flows."
+      },
+      {
+        "name": "ops_admin",
+        "description": "Operational administrator for platform setup."
+      }
+    ]
+  },
+  "groups": [
+    {
+      "name": "careos",
+      "path": "/careos",
+      "attributes": {
+        "tenant_id": ["10000000-0000-4000-8000-000000000001"]
+      },
+      "subGroups": [
+        {
+          "name": "ash-house",
+          "path": "/careos/ash-house",
+          "attributes": {
+            "home_ids": ["20000000-0000-4000-8000-00000000000a"]
+          }
+        },
+        {
+          "name": "birch-house",
+          "path": "/careos/birch-house",
+          "attributes": {
+            "home_ids": ["20000000-0000-4000-8000-00000000000b"]
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "web",
+      "name": "CareOS Web",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "redirectUris": [
+        "${KEYCLOAK_PUBLIC_URL}/api/auth/callback/keycloak",
+        "https://localhost/api/auth/callback/keycloak",
+        "http://localhost:3001/api/auth/callback/keycloak"
+      ],
+      "webOrigins": ["${KEYCLOAK_PUBLIC_URL}", "https://localhost", "http://localhost:3001"],
+      "attributes": {
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "backchannel.logout.session.required": "true",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${KEYCLOAK_PUBLIC_URL}/*##https://localhost/*##http://localhost:3001/*"
+      },
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access"],
+      "protocolMappers": [
+        {
+          "name": "subject",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "lightweight.claim": "false"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "claim.name": "tenant_id",
+            "id.token.claim": "true",
+            "jsonType.label": "String",
+            "user.attribute": "tenant_id",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "home_ids",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "aggregate.attrs": "false",
+            "claim.name": "home_ids",
+            "id.token.claim": "true",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "user.attribute": "home_ids",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "id.token.claim": "true",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "included.client.audience": "api"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "api",
+      "name": "CareOS API",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "secret": "change-me-api-client-secret",
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "false"
+      },
+      "defaultClientScopes": ["roles", "profile", "email"],
+      "optionalClientScopes": ["offline_access"],
+      "protocolMappers": [
+        {
+          "name": "subject",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "lightweight.claim": "false"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "claim.name": "tenant_id",
+            "id.token.claim": "true",
+            "jsonType.label": "String",
+            "user.attribute": "tenant_id",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "home_ids",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "aggregate.attrs": "false",
+            "claim.name": "home_ids",
+            "id.token.claim": "true",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "user.attribute": "home_ids",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "id.token.claim": "true",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "mcp",
+      "name": "CareOS MCP",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "secret": "change-me-mcp-client-secret",
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "false"
+      },
+      "defaultClientScopes": ["roles", "profile", "email"],
+      "optionalClientScopes": ["offline_access"],
+      "protocolMappers": [
+        {
+          "name": "subject",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "lightweight.claim": "false"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "claim.name": "tenant_id",
+            "id.token.claim": "true",
+            "jsonType.label": "String",
+            "user.attribute": "tenant_id",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "home_ids",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "aggregate.attrs": "false",
+            "claim.name": "home_ids",
+            "id.token.claim": "true",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "user.attribute": "home_ids",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "id.token.claim": "true",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "manager@careos.local",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "manager@careos.local",
+      "firstName": "Maya",
+      "lastName": "Manager",
+      "groups": ["/careos/ash-house", "/careos/birch-house"],
+      "attributes": {
+        "home_ids": [
+          "20000000-0000-4000-8000-00000000000a",
+          "20000000-0000-4000-8000-00000000000b"
+        ],
+        "tenant_id": ["10000000-0000-4000-8000-000000000001"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "careos-dev-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["manager"],
+      "id": "30000000-0000-4000-8000-000000000001"
+    },
+    {
+      "username": "shift.lead@careos.local",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "shift.lead@careos.local",
+      "firstName": "Sam",
+      "lastName": "Shiftlead",
+      "groups": ["/careos/ash-house"],
+      "attributes": {
+        "home_ids": ["20000000-0000-4000-8000-00000000000a"],
+        "tenant_id": ["10000000-0000-4000-8000-000000000001"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "careos-dev-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["shift_lead"],
+      "id": "30000000-0000-4000-8000-000000000002"
+    },
+    {
+      "username": "support.worker@careos.local",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "support.worker@careos.local",
+      "firstName": "Riley",
+      "lastName": "Support",
+      "groups": ["/careos/birch-house"],
+      "attributes": {
+        "home_ids": ["20000000-0000-4000-8000-00000000000b"],
+        "tenant_id": ["10000000-0000-4000-8000-000000000001"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "careos-dev-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["support_worker"],
+      "id": "30000000-0000-4000-8000-000000000003"
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000004",
+      "username": "safeguarding.lead@careos.local",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "safeguarding.lead@careos.local",
+      "firstName": "Dana",
+      "lastName": "DSL",
+      "groups": ["/careos/ash-house", "/careos/birch-house"],
+      "attributes": {
+        "home_ids": [
+          "20000000-0000-4000-8000-00000000000a",
+          "20000000-0000-4000-8000-00000000000b"
+        ],
+        "tenant_id": ["10000000-0000-4000-8000-000000000001"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "careos-dev-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["safeguarding_lead"]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000005",
+      "username": "ops.admin@careos.local",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "ops.admin@careos.local",
+      "firstName": "Olu",
+      "lastName": "Opsadmin",
+      "groups": ["/careos/ash-house", "/careos/birch-house"],
+      "attributes": {
+        "home_ids": [
+          "20000000-0000-4000-8000-00000000000a",
+          "20000000-0000-4000-8000-00000000000b"
+        ],
+        "tenant_id": ["10000000-0000-4000-8000-000000000001"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "careos-dev-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["ops_admin"]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000006",
+      "username": "ash.support@careos.local",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "ash.support@careos.local",
+      "firstName": "Ari",
+      "lastName": "Support",
+      "groups": ["/careos/ash-house"],
+      "attributes": {
+        "home_ids": ["20000000-0000-4000-8000-00000000000a"],
+        "tenant_id": ["10000000-0000-4000-8000-000000000001"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "careos-dev-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["support_worker"]
+    }
+  ]
+}

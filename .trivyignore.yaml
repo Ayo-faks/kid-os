@@ -1,0 +1,6 @@
+vulnerabilities:
+  - id: GHSA-4w2j-m93h-cj5j
+    purls:
+      - pkg:cargo/quinn-proto@0.11.14
+    expired_at: 2026-08-31
+    statement: Temporal SDK 1.21.1 is the latest release; CareOS uses gRPC over HTTP/2 and exposes no QUIC listener.

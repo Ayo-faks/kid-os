@@ -1,0 +1,30 @@
+{
+  "$id": "https://careos.local/schemas/incident.medication-near-miss.v1.ui.json",
+  "order": [
+    "residentId",
+    "occurredAt",
+    "medication",
+    "nearMissType",
+    "summary",
+    "harmCausedToResident",
+    "correctiveAction",
+    "reportedToPharmacy",
+    "reportedToGp"
+  ],
+  "widgets": {
+    "residentId": { "widget": "resident-picker" },
+    "occurredAt": { "widget": "datetime" },
+    "medication": { "widget": "object-group" },
+    "nearMissType": { "widget": "select" },
+    "summary": { "widget": "textarea", "rows": 4 },
+    "harmCausedToResident": { "widget": "select", "emphasis": "warning" },
+    "correctiveAction": { "widget": "textarea", "rows": 3 },
+    "reportedToPharmacy": { "widget": "toggle" },
+    "reportedToGp": { "widget": "toggle" }
+  },
+  "sections": [
+    { "title": "Resident and medication", "fields": ["residentId", "occurredAt", "medication"] },
+    { "title": "Near-miss detail", "fields": ["nearMissType", "summary", "harmCausedToResident"] },
+    { "title": "Response", "fields": ["correctiveAction", "reportedToPharmacy", "reportedToGp"] }
+  ]
+}

@@ -1,0 +1,63 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - ${env:CAREOS_PUBLIC_ORIGIN}
+
+processors:
+  batch:
+    timeout: 5s
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 384
+    spike_limit_mib: 96
+  resource:
+    attributes:
+      - action: upsert
+        key: service.namespace
+        value: careos
+
+exporters:
+  azuremonitor:
+    connection_string: ${env:APPLICATIONINSIGHTS_CONNECTION_STRING}
+
+service:
+  extensions:
+    - health_check
+  pipelines:
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - resource
+        - batch
+      exporters:
+        - azuremonitor
+    metrics:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - resource
+        - batch
+      exporters:
+        - azuremonitor
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - resource
+        - batch
+      exporters:
+        - azuremonitor

@@ -1,0 +1,78 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# build outputs
+dist/
+build/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+.azure/.env*
+.azure/*/.env
+.azure/*/.env.*
+.azure/*/terraform.backend.hcl
+
+# local tools and caches
+.tmp/
+
+# terraform local state and plans (provider lock files stay tracked)
+**/.terraform/
+*.tfplan
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# test/coverage
+coverage/
+.vitest/
+.nyc_output/
+playwright-report/
+test-results/
+apps/web/e2e/.playwright/
+docs/artifacts/
+/docs/phase1-trace-evidence.md
+.agentops/**/latest.json
+.agentops/**/runs/
+
+# traces and generated security reports
+*.trace
+*.trace.zip
+*.sarif
+*.spdx.json
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# prisma
+apps/api/prisma/migrations/dev.db*
+
+# python (apps/agent)
+__pycache__/
+.mypy_cache/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.venv/
+.python-version

@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "./durable-parity-matrix.schema.json",
+  "title": "CareOS Durable parity matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "$comment", "schemaVersion", "status", "workflows", "crossCuttingSuites"],
+  "properties": {
+    "$schema": { "const": "./durable-parity-matrix.schema.json" },
+    "$comment": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": 1 },
+    "status": { "const": "pending-managed-staging" },
+    "workflows": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": { "$ref": "#/$defs/workflow" }
+    },
+    "crossCuttingSuites": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/suite" }
+    }
+  },
+  "$defs": {
+    "workerPath": {
+      "type": "string",
+      "pattern": "^apps/worker/src/.+\\.ts$"
+    },
+    "branches": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "temporal", "durable", "emulatorTest", "branches", "managedEvidence"],
+      "properties": {
+        "id": {
+          "enum": [
+            "approval-routing",
+            "document-ingest",
+            "email-draft",
+            "export-bundle",
+            "handover",
+            "handover-due-reminder",
+            "incident-follow-up",
+            "incident-report",
+            "missing-fields-audit",
+            "ping",
+            "retention",
+            "rota-analyze",
+            "rota-publish",
+            "safeguarding-digest",
+            "shift-reminder"
+          ]
+        },
+        "temporal": { "$ref": "#/$defs/workerPath" },
+        "durable": { "$ref": "#/$defs/workerPath" },
+        "emulatorTest": { "$ref": "#/$defs/workerPath" },
+        "branches": { "$ref": "#/$defs/branches" },
+        "managedEvidence": { "type": "null" }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "test", "branches"],
+      "properties": {
+        "id": { "enum": ["recovery", "side-effects", "tenant-idempotency", "versioning"] },
+        "test": { "$ref": "#/$defs/workerPath" },
+        "branches": { "$ref": "#/$defs/branches" }
+      }
+    }
+  }
+}

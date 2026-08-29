@@ -1,0 +1,10 @@
+{
+  "extends": "@careos/tsconfig/node-lib.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2023"]
+  },
+  "include": ["src/**/*"]
+}

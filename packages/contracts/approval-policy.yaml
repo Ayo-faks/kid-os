@@ -1,0 +1,54 @@
+# Phase 3 §4 — shared approval policy for Hermes skills and NestJS-side
+# enforcement. Each skill declares its default approval level. Skills that
+# branch on payload (e.g. draft_email) MAY declare a conditional override
+# under `conditional`. Both the @careos/contracts TS reader and the
+# careos_agent Python reader parse this file and MUST agree.
+#
+# Levels:
+#   none          — read-only / narration; never mutates domain state.
+#   confirm       — user must review and confirm a draft before persistence.
+#   dual_sign_off — requires two approvers (e.g. manager + safeguarding lead).
+version: 1
+
+skills:
+  ping:
+    level: none
+    required_roles: []
+    description: Phase 0 liveness probe.
+
+  list_form_templates:
+    level: none
+    required_roles: []
+    description: Read-only form template catalogue.
+
+  narrate_rota:
+    level: none
+    required_roles: []
+    description: Narrates rota analysis. Refuses mutation; cannot publish.
+
+  draft_incident_from_text:
+    level: confirm
+    required_roles: [manager]
+    description: Drafts an incident form; user must confirm before submit.
+    conditional:
+      - when: { safeguarding: true }
+        level: dual_sign_off
+        required_roles: [manager, safeguarding_lead]
+
+  summarize_handover:
+    level: confirm
+    required_roles: [manager]
+    description: Summarises a shift-end handover; user must confirm before persistence.
+
+  draft_email:
+    level: none
+    required_roles: []
+    description: |
+      Drafts an email. Routine drafts are saved as `draft` for the author to
+      send; sensitive drafts escalate to dual sign-off (manager + safeguarding
+      lead) before they leave the home.
+    conditional:
+      # When the drafted email is tagged sensitive, route via approvals.
+      - when: { sensitivity: sensitive }
+        level: dual_sign_off
+        required_roles: [manager, safeguarding_lead]

@@ -1,0 +1,14 @@
+{
+  "$id": "https://careos.local/schemas/note.observation.v1.ui.json",
+  "order": ["residentId", "observedAt", "mood", "body", "tags"],
+  "widgets": {
+    "residentId": { "widget": "resident-picker" },
+    "observedAt": { "widget": "datetime" },
+    "mood": { "widget": "select" },
+    "body": { "widget": "textarea", "rows": 6 },
+    "tags": { "widget": "tag-input" }
+  },
+  "sections": [
+    { "title": "Observation", "fields": ["residentId", "observedAt", "mood", "body", "tags"] }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "$id": "https://careos.local/schemas/handover.shift-end.v1.ui.json",
+  "order": ["shiftId", "endedAt", "narrative", "residentsRequiringFollowUp", "openTasks"],
+  "widgets": {
+    "shiftId": { "widget": "shift-picker" },
+    "endedAt": { "widget": "datetime" },
+    "narrative": { "widget": "textarea", "rows": 10 },
+    "residentsRequiringFollowUp": { "widget": "repeating-group" },
+    "openTasks": { "widget": "task-picker" }
+  },
+  "sections": [
+    { "title": "Shift details", "fields": ["shiftId", "endedAt"] },
+    { "title": "Narrative", "fields": ["narrative"] },
+    { "title": "Follow-up", "fields": ["residentsRequiringFollowUp", "openTasks"] }
+  ]
+}

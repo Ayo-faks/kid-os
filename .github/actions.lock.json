@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "resolvedAt": "2026-08-29T00:00:00.000Z",
+  "actions": [
+    {
+      "repository": "actions/checkout",
+      "sourceTag": "v4",
+      "commit": "11d5960a326750d5838078e36cf38b85af677262",
+      "usedBy": [".github/workflows/ci.yml"],
+      "resolvedAt": "2026-07-24T07:32:32.884Z"
+    },
+    {
+      "repository": "pnpm/action-setup",
+      "sourceTag": "v4",
+      "commit": "b906affcce14559ad1aafd4ab0e942779e9f58b1",
+      "usedBy": [".github/workflows/ci.yml"],
+      "resolvedAt": "2026-07-24T07:32:33.244Z"
+    },
+    {
+      "repository": "actions/setup-node",
+      "sourceTag": "v4",
+      "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020",
+      "usedBy": [".github/workflows/ci.yml"],
+      "resolvedAt": "2026-07-24T07:32:36.064Z"
+    },
+    {
+      "repository": "aquasecurity/trivy-action",
+      "sourceTag": "v0.36.0",
+      "commit": "ed142fd0673e97e23eac54620cfb913e5ce36c25",
+      "usedBy": [".github/workflows/ci.yml"],
+      "resolvedAt": "2026-07-24T07:32:36.413Z"
+    },
+    {
+      "repository": "anchore/sbom-action",
+      "sourceTag": "v0",
+      "commit": "e22c389904149dbc22b58101806040fa8d37a610",
+      "usedBy": [".github/workflows/ci.yml"],
+      "resolvedAt": "2026-07-24T07:32:37.151Z"
+    },
+    {
+      "repository": "actions/upload-artifact",
+      "sourceTag": "v4",
+      "commit": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "usedBy": [".github/workflows/ci.yml"],
+      "resolvedAt": "2026-07-24T07:32:37.497Z"
+    }
+  ]
+}

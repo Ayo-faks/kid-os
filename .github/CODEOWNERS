@@ -1,0 +1,15 @@
+# Default ownership while Kid-OS has one maintainer.
+* @Ayo-faks
+
+# Security- and data-critical boundaries require explicit maintainer review.
+/apps/api/prisma/ @Ayo-faks
+/apps/api/src/auth/ @Ayo-faks
+/apps/api/src/tenant/ @Ayo-faks
+/apps/api/src/audit/ @Ayo-faks
+/apps/llm-gateway/ @Ayo-faks
+/apps/worker/src/workflows/ @Ayo-faks
+/infra/ @Ayo-faks
+/packages/contracts/ @Ayo-faks
+/packages/schemas/ @Ayo-faks
+/.github/ @Ayo-faks
+/SECURITY.md @Ayo-faks

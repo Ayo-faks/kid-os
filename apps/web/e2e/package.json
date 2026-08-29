@@ -1,0 +1,20 @@
+{
+  "name": "@careos/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint \"**/*.ts\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "playwright test",
+    "test:real": "playwright test --config playwright.real.config.ts"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@careos/tsconfig": "workspace:*",
+    "@playwright/test": "^1.48.2",
+    "@types/node": "^22.7.4",
+    "typescript": "^5.6.2"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@careos/worker",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json && node scripts/build-workflow-bundle.mjs",
+    "start": "node dist/index.js",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "register-shift-reminder-schedule": "tsx src/scripts/register-shift-reminder-schedule.ts"
+  },
+  "dependencies": {
+    "@careos/contracts": "workspace:*",
+    "@careos/object-storage": "workspace:*",
+    "@careos/schemas": "workspace:*",
+    "@microsoft/durabletask-js": "0.3.0",
+    "@microsoft/durabletask-js-azuremanaged": "0.3.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.79.0",
+    "@opentelemetry/sdk-node": "^0.221.0",
+    "@temporalio/activity": "^1.21.1",
+    "@temporalio/client": "^1.21.1",
+    "@temporalio/worker": "^1.21.1",
+    "@temporalio/workflow": "^1.21.1",
+    "fflate": "^0.8.3",
+    "minio": "^8.0.5",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@careos/tsconfig": "workspace:*",
+    "@types/node": "^22.7.4",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.2"
+  }
+}

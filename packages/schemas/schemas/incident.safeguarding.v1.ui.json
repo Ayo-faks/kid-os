@@ -1,0 +1,50 @@
+{
+  "$id": "https://careos.local/schemas/incident.safeguarding.v1.ui.json",
+  "order": [
+    "residentId",
+    "occurredAt",
+    "discoveredAt",
+    "category",
+    "summary",
+    "perpetratorKnown",
+    "perpetratorDetail",
+    "isChildAtImmediateRisk",
+    "immediateActionsTaken",
+    "reportedToDsl",
+    "reportedToDslAt",
+    "externalAgenciesNotified"
+  ],
+  "widgets": {
+    "residentId": { "widget": "resident-picker" },
+    "occurredAt": { "widget": "datetime" },
+    "discoveredAt": { "widget": "datetime" },
+    "category": { "widget": "select" },
+    "summary": { "widget": "textarea", "rows": 8 },
+    "perpetratorKnown": { "widget": "toggle" },
+    "perpetratorDetail": {
+      "widget": "textarea",
+      "rows": 3,
+      "visibleWhen": { "field": "perpetratorKnown", "equals": true }
+    },
+    "isChildAtImmediateRisk": { "widget": "toggle", "emphasis": "danger" },
+    "immediateActionsTaken": { "widget": "textarea", "rows": 4 },
+    "reportedToDsl": { "widget": "toggle" },
+    "reportedToDslAt": {
+      "widget": "datetime",
+      "visibleWhen": { "field": "reportedToDsl", "equals": true }
+    },
+    "externalAgenciesNotified": { "widget": "repeating-group" }
+  },
+  "sections": [
+    {
+      "title": "When and what",
+      "fields": ["residentId", "occurredAt", "discoveredAt", "category", "summary"]
+    },
+    { "title": "People involved", "fields": ["perpetratorKnown", "perpetratorDetail"] },
+    { "title": "Risk and response", "fields": ["isChildAtImmediateRisk", "immediateActionsTaken"] },
+    {
+      "title": "Escalation",
+      "fields": ["reportedToDsl", "reportedToDslAt", "externalAgenciesNotified"]
+    }
+  ]
+}

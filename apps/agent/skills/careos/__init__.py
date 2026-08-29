@@ -1,0 +1,1 @@
+"""CareOS Hermes skill package."""

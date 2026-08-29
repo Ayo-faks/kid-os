@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "registry": "registry.ollama.ai",
+  "repository": "library/qwen2.5",
+  "tag": "0.5b-instruct",
+  "manifestDigest": "sha256:a8b0c51577010a279d933d14c2a8ab4b268079d44c5c8830c0a93900f1827c67",
+  "config": {
+    "mediaType": "application/vnd.docker.container.image.v1+json",
+    "digest": "sha256:005f95c7475154a17e84b85cd497949d6dd2a4f9d77c096e3c66e4d9c32acaf5",
+    "size": 490
+  },
+  "layers": [
+    {
+      "mediaType": "application/vnd.ollama.image.model",
+      "digest": "sha256:c5396e06af294bd101b30dce59131a76d2b773e76950acc870eda801d3ab0515",
+      "size": 397807936
+    },
+    {
+      "mediaType": "application/vnd.ollama.image.system",
+      "digest": "sha256:66b9ea09bd5b7099cbb4fc820f31b575c0366fa439b08245566692c6784e281e",
+      "size": 68
+    },
+    {
+      "mediaType": "application/vnd.ollama.image.template",
+      "digest": "sha256:eb4402837c7829a690fa845de4d7f3fd842c2adee476d5341da8a46ea9255175",
+      "size": 1482
+    },
+    {
+      "mediaType": "application/vnd.ollama.image.license",
+      "digest": "sha256:832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e",
+      "size": 11343
+    }
+  ],
+  "usedBy": [".env.example#CAREOS_LLM_MODEL", "infra/compose/docker-compose.yml#ollama-pull"],
+  "resolvedAt": "2026-07-24T07:31:10.804Z"
+}

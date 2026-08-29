@@ -1,0 +1,13 @@
+node_modules
+dist
+build
+.next
+.turbo
+.tmp
+.mypy_cache
+coverage
+infra/terraform
+pnpm-lock.yaml
+**/generated/**
+apps/agent/config.yaml
+packages/contracts/openapi.yaml

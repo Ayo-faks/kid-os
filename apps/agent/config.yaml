@@ -1,0 +1,16 @@
+server:
+	host: ${HERMES_HOST:-0.0.0.0}
+	port: ${HERMES_PORT:-8080}
+
+mcp:
+	careos_api_url: ${HERMES_MCP_URL:-http://api:3000/mcp}
+
+llm:
+	provider: openai-compatible
+	# Azure OpenAI and Foundry egress must be mediated by llm-gateway.
+	base_url: ${LLM_GATEWAY_URL:-http://llm-gateway:8080}/v1
+	api_key_env: LLM_GATEWAY_API_KEY
+
+skills:
+	- name: careos
+		path: /app/skills/careos/SKILL.md

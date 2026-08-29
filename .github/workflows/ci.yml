@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Source Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.18.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: HUSKY=0 pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @careos/api exec prisma generate --schema prisma/schema.prisma
+
+      - name: Install hashed agent test dependencies
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/agent-venv"
+          "$RUNNER_TEMP/agent-venv/bin/python" -m pip install \
+            --disable-pip-version-check \
+            --require-hashes \
+            -r apps/agent/requirements-test-lock.txt
+          printf '%s\n' "$RUNNER_TEMP/agent-venv/bin" >>"$GITHUB_PATH"
+
+      - name: Public source boundary
+        run: pnpm -w ci:open-source:public
+
+      - name: Supply-chain pins
+        run: pnpm -w ci:supply-chain
+
+      - name: Format check
+        run: pnpm -w format:check
+
+      - name: Lint
+        run: pnpm -w lint
+
+      - name: Typecheck
+        run: pnpm -w typecheck
+
+      - name: Unit tests
+        run: pnpm -w test
+
+      - name: Agent tests
+        run: pnpm -w test:agent
+
+      - name: Production builds
+        run: pnpm -w build
+
+      - name: OpenAPI diff
+        run: pnpm -w ci:openapi
+
+      - name: Prisma schema validation
+        run: pnpm -w ci:prisma
+
+  security:
+    name: Trivy and SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Trivy filesystem report
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '0'
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom-spdx-json
+          path: sbom.spdx.json

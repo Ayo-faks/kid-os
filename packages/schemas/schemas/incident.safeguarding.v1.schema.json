@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://careos.local/schemas/incident.safeguarding.v1.json",
+  "title": "Safeguarding Incident",
+  "type": "object",
+  "required": [
+    "residentId",
+    "occurredAt",
+    "discoveredAt",
+    "category",
+    "summary",
+    "immediateActionsTaken",
+    "isChildAtImmediateRisk",
+    "reportedToDsl"
+  ],
+  "properties": {
+    "residentId": { "type": "string", "format": "uuid", "title": "Resident", "x-mandatory": true },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "title": "When did it happen?",
+      "x-mandatory": true
+    },
+    "discoveredAt": {
+      "type": "string",
+      "format": "date-time",
+      "title": "When was it discovered?",
+      "x-mandatory": true
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "physical_abuse",
+        "sexual_abuse",
+        "emotional_abuse",
+        "neglect",
+        "exploitation",
+        "online_harm",
+        "self_neglect",
+        "other"
+      ],
+      "title": "Category of concern",
+      "x-mandatory": true
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 4000,
+      "title": "Factual summary",
+      "x-mandatory": true
+    },
+    "perpetratorKnown": {
+      "type": "boolean",
+      "default": false,
+      "title": "Is the alleged perpetrator known?"
+    },
+    "perpetratorDetail": {
+      "type": "string",
+      "maxLength": 1000,
+      "title": "Alleged perpetrator detail"
+    },
+    "isChildAtImmediateRisk": {
+      "type": "boolean",
+      "title": "Is the child at immediate risk?",
+      "x-mandatory": true
+    },
+    "immediateActionsTaken": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 2000,
+      "title": "Immediate actions taken",
+      "x-mandatory": true
+    },
+    "reportedToDsl": {
+      "type": "boolean",
+      "title": "Reported to Designated Safeguarding Lead?",
+      "x-mandatory": true
+    },
+    "reportedToDslAt": {
+      "type": "string",
+      "format": "date-time",
+      "title": "When was DSL informed?"
+    },
+    "externalAgenciesNotified": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["agency", "notifiedAt"],
+        "properties": {
+          "agency": {
+            "type": "string",
+            "enum": ["local_authority", "police", "lado", "ofsted", "health", "other"]
+          },
+          "notifiedAt": { "type": "string", "format": "date-time" },
+          "reference": { "type": "string", "maxLength": 120 }
+        }
+      },
+      "default": []
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "reportedToDsl": { "const": true } }, "required": ["reportedToDsl"] },
+      "then": { "required": ["reportedToDslAt"] }
+    },
+    {
+      "if": {
+        "properties": { "perpetratorKnown": { "const": true } },
+        "required": ["perpetratorKnown"]
+      },
+      "then": { "required": ["perpetratorDetail"] }
+    }
+  ],
+  "additionalProperties": false
+}

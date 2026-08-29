@@ -1,0 +1,141 @@
+{
+  "$comment": "Deterministic demo/bootstrap identities. Single source of truth for the seed script (prisma/seed.mjs), the Keycloak realm import (infra/keycloak/careos-realm.json), and the realm-parity contract test. Never used in production (CAREOS_SEED_DEMO gates the seed).",
+  "tenant": {
+    "id": "10000000-0000-4000-8000-000000000001",
+    "name": "CareOS Demo Organisation"
+  },
+  "homes": [
+    {
+      "id": "20000000-0000-4000-8000-00000000000a",
+      "name": "Ash House",
+      "ofstedUrn": "SC000001"
+    },
+    {
+      "id": "20000000-0000-4000-8000-00000000000b",
+      "name": "Birch Lodge",
+      "ofstedUrn": "SC000002"
+    }
+  ],
+  "users": [
+    {
+      "id": "30000000-0000-4000-8000-000000000001",
+      "keycloakSub": "30000000-0000-4000-8000-000000000001",
+      "email": "manager@careos.local",
+      "displayName": "Maya Manager",
+      "roles": ["manager"],
+      "homeIds": ["20000000-0000-4000-8000-00000000000a", "20000000-0000-4000-8000-00000000000b"],
+      "gender": "female",
+      "qualifications": ["level5_leadership"]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000002",
+      "keycloakSub": "30000000-0000-4000-8000-000000000002",
+      "email": "shift.lead@careos.local",
+      "displayName": "Sam Shiftlead",
+      "roles": ["shift_lead"],
+      "homeIds": ["20000000-0000-4000-8000-00000000000a"],
+      "gender": "male",
+      "qualifications": ["level3_residential_childcare", "first_aid"]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000003",
+      "keycloakSub": "30000000-0000-4000-8000-000000000003",
+      "email": "support.worker@careos.local",
+      "displayName": "Riley Support",
+      "roles": ["support_worker"],
+      "homeIds": ["20000000-0000-4000-8000-00000000000b"],
+      "gender": "female",
+      "qualifications": ["level3_residential_childcare"]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000004",
+      "keycloakSub": "30000000-0000-4000-8000-000000000004",
+      "email": "safeguarding.lead@careos.local",
+      "displayName": "Dana DSL",
+      "roles": ["safeguarding_lead"],
+      "homeIds": ["20000000-0000-4000-8000-00000000000a", "20000000-0000-4000-8000-00000000000b"],
+      "gender": "female",
+      "qualifications": ["designated_safeguarding_lead"]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000005",
+      "keycloakSub": "30000000-0000-4000-8000-000000000005",
+      "email": "ops.admin@careos.local",
+      "displayName": "Olu Opsadmin",
+      "roles": ["ops_admin"],
+      "homeIds": ["20000000-0000-4000-8000-00000000000a", "20000000-0000-4000-8000-00000000000b"],
+      "gender": "male",
+      "qualifications": []
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000006",
+      "keycloakSub": "30000000-0000-4000-8000-000000000006",
+      "email": "ash.support@careos.local",
+      "displayName": "Ari Support",
+      "roles": ["support_worker"],
+      "homeIds": ["20000000-0000-4000-8000-00000000000a"],
+      "gender": "non_binary",
+      "qualifications": ["level3_residential_childcare"]
+    }
+  ],
+  "residents": [
+    {
+      "id": "40000000-0000-4000-8000-000000000001",
+      "homeId": "20000000-0000-4000-8000-00000000000a",
+      "firstName": "Jamie",
+      "lastName": "Connor",
+      "preferredName": "Jamie",
+      "dateOfBirth": "2010-04-12",
+      "arrivedAt": "2025-01-06T09:00:00.000Z"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000002",
+      "homeId": "20000000-0000-4000-8000-00000000000a",
+      "firstName": "Riley",
+      "lastName": "Achebe",
+      "preferredName": "Ri",
+      "dateOfBirth": "2011-09-03",
+      "arrivedAt": "2025-03-15T10:30:00.000Z"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000003",
+      "homeId": "20000000-0000-4000-8000-00000000000b",
+      "firstName": "Alex",
+      "lastName": "Nowak",
+      "preferredName": null,
+      "dateOfBirth": "2009-12-21",
+      "arrivedAt": "2024-11-02T14:00:00.000Z"
+    }
+  ],
+  "rotaRules": [
+    {
+      "id": "60000000-0000-4000-8000-000000000001",
+      "homeId": "20000000-0000-4000-8000-00000000000a",
+      "name": "Minimum support workers",
+      "kind": "min_staffing",
+      "parameters": { "minHeadcount": 2, "requiredRole": "support_worker" }
+    }
+  ],
+  "shifts": [
+    {
+      "id": "50000000-0000-4000-8000-000000000001",
+      "homeId": "20000000-0000-4000-8000-00000000000a",
+      "requiredRole": "support_worker",
+      "minHeadcount": 2,
+      "startHourUtc": 7,
+      "durationHours": 8,
+      "daysFromNow": 1,
+      "assignedUserIds": ["30000000-0000-4000-8000-000000000002"]
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000002",
+      "homeId": "20000000-0000-4000-8000-00000000000b",
+      "requiredRole": "support_worker",
+      "minHeadcount": 1,
+      "startHourUtc": 15,
+      "durationHours": 8,
+      "daysFromNow": 1,
+      "assignedUserIds": ["30000000-0000-4000-8000-000000000003"]
+    }
+  ]
+}

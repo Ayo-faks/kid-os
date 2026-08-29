@@ -1,0 +1,799 @@
+name: ${COMPOSE_PROJECT_NAME:-careos}
+
+x-restart-policy: &restart-policy
+  restart: unless-stopped
+
+x-health-defaults: &health-defaults
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 20s
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-file: '5'
+    max-size: 10m
+
+services:
+  dts-emulator:
+    image: mcr.microsoft.com/dts/dts-emulator@sha256:cd92ebc92bd688ad790b38f49d6c72ad68b1c6f025bb401ea7cb486368afb6af
+    profiles:
+      - durable
+    restart: 'no'
+    logging: *logging
+    networks:
+      - careos-internal
+    ports:
+      - ${DTS_EMULATOR_GRPC_PORT:-8080}:8080
+      - ${DTS_EMULATOR_DASHBOARD_PORT:-8082}:8082
+
+  postgres:
+    <<: *restart-policy
+    image: pgvector/pgvector:pg16@sha256:a36250871de0833b8757561c72f2477ef1ddd1101afa4e617fb552e0de514c6b
+    environment:
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-change-me}
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:-careos_app}
+      POSTGRES_DB: ${POSTGRES_DB:-careos}
+      POSTGRES_EXTRA_DBS: ${POSTGRES_EXTRA_DBS:-keycloak,temporal,temporal_visibility,mattermost,novu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_USER: ${POSTGRES_USER:-careos}
+      TZ: ${TZ:-Europe/London}
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - test "$$(cat /proc/1/comm)" = postgres && pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+    logging: *logging
+    networks:
+      - careos-internal
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../postgres/initdb:/docker-entrypoint-initdb.d:ro
+
+  redis:
+    <<: *restart-policy
+    image: redis:7.4-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
+    command:
+      - sh
+      - -c
+      - redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD}"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-me}
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - redis-cli -a "$${REDIS_PASSWORD}" ping | grep PONG
+    logging: *logging
+    networks:
+      - careos-internal
+    volumes:
+      - redis-data:/data
+
+  keycloak:
+    <<: *restart-policy
+    build:
+      context: ../keycloak
+      dockerfile: Dockerfile
+    command:
+      - start
+      - --optimized
+      - --import-realm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER:-careos}
+      KC_HEALTH_ENABLED: 'true'
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-https://localhost}/keycloak
+      KC_HOSTNAME_STRICT: 'false'
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: 'true'
+      KC_HTTP_ENABLED: 'true'
+      KC_METRICS_ENABLED: 'true'
+      KC_PROXY_HEADERS: xforwarded
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-https://localhost}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-change-me}
+    healthcheck:
+      <<: *health-defaults
+      retries: 30
+      start_period: 240s
+      test:
+        - CMD-SHELL
+        - >-
+          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9000; printf "GET /keycloak/health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; grep -q "200" <&3'
+    logging: *logging
+    networks:
+      - careos-internal
+    ports:
+      - ${KEYCLOAK_PORT:-8080}:8080
+    volumes:
+      - ../keycloak/careos-realm.json:/opt/keycloak/data/import/careos-realm.json:ro
+
+  minio:
+    <<: *restart-policy
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e
+    command:
+      - server
+      - /data
+      - --console-address
+      - :9001
+    environment:
+      MINIO_BROWSER_REDIRECT_URL: https://${PUBLIC_HOSTNAME:-localhost}/minio-console
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-careos}
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+    volumes:
+      - minio-data:/data
+
+  # One-shot: idempotently creates the buckets the worker/API expect.
+  # (The official MinIO image has no MINIO_DEFAULT_BUCKETS support.)
+  minio-init:
+    image: quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z@sha256:aead63c77f9db9107f1696fb08ecb0faeda23729cde94b0f663edf4fe09728e3
+    restart: 'no'
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        mc alias set careos http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        for bucket in $${MINIO_BUCKETS}; do
+          mc mb --ignore-existing "careos/$${bucket}"
+        done
+        mc ls careos
+    environment:
+      MINIO_BUCKETS: ${MINIO_BUCKETS:-attachments exports ingest careos-documents careos-export-bundles}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-careos}
+    logging: *logging
+    networks:
+      - careos-internal
+
+  temporal:
+    <<: *restart-policy
+    image: temporalio/auto-setup:1.27.2@sha256:b44cbfeb43dbeae42db113b44fb8414c3452f05643b3d6b1592f955277d73526
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: '5432'
+      ENABLE_ES: 'false'
+      POSTGRES_PWD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-careos}
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CLI_ADDRESS: temporal:7233
+    healthcheck:
+      <<: *health-defaults
+      retries: 30
+      start_period: 240s
+      test:
+        - CMD-SHELL
+        - temporal operator cluster health --address temporal:7233 | grep -q SERVING
+    logging: *logging
+    networks:
+      - careos-internal
+    volumes:
+      - temporal-data:/etc/temporal
+
+  temporal-ui:
+    <<: *restart-policy
+    image: temporalio/ui:2.37.2@sha256:3d7b36849d7ca5245f59f6ab558bebbd6b83aa1518f4505e97927419360d1f25
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: https://${PUBLIC_HOSTNAME:-localhost},http://localhost
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - wget -q -O- http://127.0.0.1:8080 >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+
+  # One-shot: applies Prisma migrations before any app service starts.
+  # Uses the owner role (MIGRATION_DATABASE_URL) — the app role cannot ALTER.
+  migrate:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+      target: build
+    restart: 'no'
+    command:
+      - pnpm
+      - exec
+      - prisma
+      - migrate
+      - deploy
+      - --schema
+      - prisma/schema.prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${MIGRATION_DATABASE_URL:-postgresql://careos:change-me@postgres:5432/careos?schema=public}
+    logging: *logging
+    networks:
+      - careos-internal
+
+  # One-shot: deterministic demo data (tenants/homes/users/templates/rota).
+  # No-ops unless CAREOS_SEED_DEMO=true, so production reuses this definition.
+  seed-demo:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+      target: build
+    restart: 'no'
+    command:
+      - node
+      - prisma/seed.mjs
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      CAREOS_SEED_DEMO: ${CAREOS_SEED_DEMO:-false}
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:-postgresql://careos:change-me@postgres:5432/careos?schema=public}
+    logging: *logging
+    networks:
+      - careos-internal
+
+  api:
+    <<: *restart-policy
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      otel-collector:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      seed-demo:
+        condition: service_completed_successfully
+    environment:
+      API_JWT_AUDIENCE: ${API_JWT_AUDIENCE:-api}
+      API_PORT: ${API_PORT:-3000}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://careos_app:change-me@postgres:5432/careos?schema=public}
+      DURABLE_TASK_SCHEDULER_CONNECTION_STRING: ${DURABLE_TASK_SCHEDULER_CONNECTION_STRING:-Endpoint=http://dts-emulator:8080;Authentication=None;TaskHub=default}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-https://localhost/keycloak/realms/careos}
+      KEYCLOAK_INTERNAL_ISSUER: ${KEYCLOAK_INTERNAL_ISSUER:-http://keycloak:8080/keycloak/realms/careos}
+      LLM_GATEWAY_URL: ${LLM_GATEWAY_URL:-http://llm-gateway:8080}
+      LLM_GATEWAY_SERVICE_TOKEN: ${LLM_GATEWAY_SERVICE_TOKEN:-change-me}
+      MATTERMOST_BOT_WEBHOOK_TOKEN: ${MATTERMOST_BOT_WEBHOOK_TOKEN:-change-me}
+      MINIO_DOCUMENTS_BUCKET: ${MINIO_DOCUMENTS_BUCKET:-careos-documents}
+      MINIO_EXPORT_BUNDLES_BUCKET: ${MINIO_EXPORT_BUNDLES_BUCKET:-careos-export-bundles}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
+      MINIO_PORT: ${MINIO_PORT:-9000}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-https://localhost/minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-careos}
+      MINIO_USE_SSL: 'false'
+      OBJECT_STORAGE_PROVIDER: minio
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_SERVICE_NAME: api
+      OTEL_SERVICE_NAMESPACE: ${OTEL_SERVICE_NAMESPACE:-careos}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-me}
+      REDIS_URL: redis://default:${REDIS_PASSWORD:-change-me}@redis:6379/0
+      TEMPORAL_HOST: ${TEMPORAL_HOST:-temporal:7233}
+      TEMPORAL_DOCUMENTS_TASK_QUEUE: ${TEMPORAL_DOCUMENTS_TASK_QUEUE:-careos.documents}
+      TEMPORAL_EXPORT_BUNDLES_TASK_QUEUE: ${TEMPORAL_EXPORT_BUNDLES_TASK_QUEUE:-careos.export-bundles}
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+      TEMPORAL_RETENTION_TASK_QUEUE: ${TEMPORAL_RETENTION_TASK_QUEUE:-careos.retention}
+      TEMPORAL_ROTA_TASK_QUEUE: ${TEMPORAL_ROTA_TASK_QUEUE:-careos.rota}
+      TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-careos.phase0}
+      WORKFLOW_RUNTIME_APPROVALS: ${WORKFLOW_RUNTIME_APPROVALS:-temporal}
+      WORKFLOW_RUNTIME_DOCUMENTS: ${WORKFLOW_RUNTIME_DOCUMENTS:-temporal}
+      WORKFLOW_RUNTIME_EMAIL_DRAFTS: ${WORKFLOW_RUNTIME_EMAIL_DRAFTS:-temporal}
+      WORKFLOW_RUNTIME_EXPORT_BUNDLES: ${WORKFLOW_RUNTIME_EXPORT_BUNDLES:-temporal}
+      WORKFLOW_RUNTIME_HANDOVERS: ${WORKFLOW_RUNTIME_HANDOVERS:-temporal}
+      WORKFLOW_RUNTIME_INCIDENTS: ${WORKFLOW_RUNTIME_INCIDENTS:-temporal}
+      WORKFLOW_RUNTIME_PING: ${WORKFLOW_RUNTIME_PING:-temporal}
+      WORKFLOW_RUNTIME_RETENTION: ${WORKFLOW_RUNTIME_RETENTION:-temporal}
+      WORKFLOW_RUNTIME_ROTA_ANALYZE: ${WORKFLOW_RUNTIME_ROTA_ANALYZE:-temporal}
+      WORKFLOW_RUNTIME_ROTA_PUBLISH: ${WORKFLOW_RUNTIME_ROTA_PUBLISH:-temporal}
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - wget -q -O- http://127.0.0.1:${API_PORT:-3000}/health >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+
+  worker:
+    <<: *restart-policy
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+      hermes:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_healthy
+    environment:
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:3000}
+      AUTO_REGISTER_SCHEDULES: ${AUTO_REGISTER_SCHEDULES:-true}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://careos_app:change-me@postgres:5432/careos?schema=public}
+      DOCLING_URL: ${DOCLING_URL:-http://docling-serve:5001}
+      DURABLE_TASK_SCHEDULER_CONNECTION_STRING: ${DURABLE_TASK_SCHEDULER_CONNECTION_STRING:-Endpoint=http://dts-emulator:8080;Authentication=None;TaskHub=default}
+      EXPORT_BUNDLE_SIGNING_KEY: ${EXPORT_BUNDLE_SIGNING_KEY:-change-me}
+      HERMES_URL: http://hermes:8080
+      MATTERMOST_BOT_TOKEN: ${MATTERMOST_BOT_TOKEN:-}
+      MATTERMOST_URL: ${MATTERMOST_URL:-}
+      MINIO_DOCUMENTS_BUCKET: ${MINIO_DOCUMENTS_BUCKET:-careos-documents}
+      MINIO_EXPORT_BUNDLES_BUCKET: ${MINIO_EXPORT_BUNDLES_BUCKET:-careos-export-bundles}
+      MINIO_EXPORT_BUNDLES_ENABLED: ${MINIO_EXPORT_BUNDLES_ENABLED:-false}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
+      MINIO_PORT: ${MINIO_PORT:-9000}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-careos}
+      MINIO_USE_SSL: 'false'
+      OBJECT_STORAGE_PROVIDER: minio
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_SERVICE_NAME: worker
+      OTEL_SERVICE_NAMESPACE: ${OTEL_SERVICE_NAMESPACE:-careos}
+      TEMPORAL_HOST: ${TEMPORAL_HOST:-temporal:7233}
+      TEMPORAL_DOCUMENTS_TASK_QUEUE: ${TEMPORAL_DOCUMENTS_TASK_QUEUE:-careos.documents}
+      TEMPORAL_EXPORT_BUNDLES_TASK_QUEUE: ${TEMPORAL_EXPORT_BUNDLES_TASK_QUEUE:-careos.export-bundles}
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+      TEMPORAL_NOTIFICATIONS_TASK_QUEUE: ${TEMPORAL_NOTIFICATIONS_TASK_QUEUE:-careos.notifications}
+      TEMPORAL_RETENTION_TASK_QUEUE: ${TEMPORAL_RETENTION_TASK_QUEUE:-careos.retention}
+      TEMPORAL_ROTA_TASK_QUEUE: ${TEMPORAL_ROTA_TASK_QUEUE:-careos.rota}
+      TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-careos.phase0}
+      WORKFLOW_RUNTIME_APPROVALS: ${WORKFLOW_RUNTIME_APPROVALS:-temporal}
+      WORKFLOW_RUNTIME_DOCUMENTS: ${WORKFLOW_RUNTIME_DOCUMENTS:-temporal}
+      WORKFLOW_RUNTIME_EMAIL_DRAFTS: ${WORKFLOW_RUNTIME_EMAIL_DRAFTS:-temporal}
+      WORKFLOW_RUNTIME_EXPORT_BUNDLES: ${WORKFLOW_RUNTIME_EXPORT_BUNDLES:-temporal}
+      WORKFLOW_RUNTIME_HANDOVER_DUE_REMINDERS: ${WORKFLOW_RUNTIME_HANDOVER_DUE_REMINDERS:-temporal}
+      WORKFLOW_RUNTIME_HANDOVERS: ${WORKFLOW_RUNTIME_HANDOVERS:-temporal}
+      WORKFLOW_RUNTIME_INCIDENTS: ${WORKFLOW_RUNTIME_INCIDENTS:-temporal}
+      WORKFLOW_RUNTIME_MISSING_FIELDS_AUDIT: ${WORKFLOW_RUNTIME_MISSING_FIELDS_AUDIT:-temporal}
+      WORKFLOW_RUNTIME_PING: ${WORKFLOW_RUNTIME_PING:-temporal}
+      WORKFLOW_RUNTIME_RETENTION: ${WORKFLOW_RUNTIME_RETENTION:-temporal}
+      WORKFLOW_RUNTIME_ROTA_ANALYZE: ${WORKFLOW_RUNTIME_ROTA_ANALYZE:-temporal}
+      WORKFLOW_RUNTIME_ROTA_PUBLISH: ${WORKFLOW_RUNTIME_ROTA_PUBLISH:-temporal}
+      WORKFLOW_RUNTIME_SAFEGUARDING_DIGEST: ${WORKFLOW_RUNTIME_SAFEGUARDING_DIGEST:-temporal}
+      WORKFLOW_RUNTIME_SHIFT_REMINDERS: ${WORKFLOW_RUNTIME_SHIFT_REMINDERS:-temporal}
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - node -e "const net=require('node:net'); const socket=net.connect(7233,'temporal'); socket.on('connect',()=>process.exit(0)); socket.on('error',()=>process.exit(1)); setTimeout(()=>process.exit(1),2000);"
+    logging: *logging
+    networks:
+      - careos-internal
+
+  web:
+    <<: *restart-policy
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+    environment:
+      CAREOS_E2E_AUTH_BYPASS: ${CAREOS_E2E_AUTH_BYPASS:-false}
+      CAREOS_E2E_STATIC_DATA: ${CAREOS_E2E_STATIC_DATA:-false}
+      KEYCLOAK_WEB_CLIENT_ID: ${KEYCLOAK_WEB_CLIENT_ID:-web}
+      KEYCLOAK_WEB_CLIENT_SECRET: ${KEYCLOAK_WEB_CLIENT_SECRET:-}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-https://localhost/keycloak/realms/careos}
+      KEYCLOAK_INTERNAL_ISSUER: ${KEYCLOAK_INTERNAL_ISSUER:-http://keycloak:8080/keycloak/realms/careos}
+      NEXT_PUBLIC_API_BASE_URL: ${API_PUBLIC_URL:-https://localhost/api}
+      NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: https://${PUBLIC_HOSTNAME:-localhost}/otel/v1/traces
+      NEXT_PUBLIC_OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://localhost}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_SERVICE_NAME: web
+      OTEL_SERVICE_NAMESPACE: ${OTEL_SERVICE_NAMESPACE:-careos}
+      PHASE1_CORRELATION_ID: ${PHASE1_CORRELATION_ID:-}
+      PORT: ${WEB_PORT:-3001}
+      WEB_PORT: ${WEB_PORT:-3001}
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - wget -q -O- http://127.0.0.1:${WEB_PORT:-3001} >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+
+  hermes:
+    <<: *restart-policy
+    build:
+      context: ../../apps/agent
+    depends_on:
+      api:
+        condition: service_healthy
+      llm-gateway:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+    environment:
+      HERMES_CONFIG: /app/config.yaml
+      HERMES_PORT: 8080
+      HERMES_MCP_URL: http://api:3000/mcp
+      LLM_GATEWAY_URL: ${LLM_GATEWAY_URL:-http://llm-gateway:8080}
+      LLM_GATEWAY_SERVICE_TOKEN: ${LLM_GATEWAY_SERVICE_TOKEN:-change-me}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_SERVICE_NAME: hermes
+      OTEL_SERVICE_NAMESPACE: ${OTEL_SERVICE_NAMESPACE:-careos}
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - python -c "from urllib.request import urlopen; urlopen('http://127.0.0.1:8080/health', timeout=2).read()"
+    logging: *logging
+    networks:
+      - careos-internal
+
+  gotenberg:
+    <<: *restart-policy
+    image: gotenberg/gotenberg:8.15@sha256:cec2b75259ea1828bc473521b83c1d4e4a6c45209c56bd6bb0f98f79c071e70d
+    command:
+      - gotenberg
+      - --api-timeout=30s
+      - --chromium-disable-javascript=true
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - wget -q -O- http://127.0.0.1:3000/health >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+
+  docling-serve:
+    <<: *restart-policy
+    image: ghcr.io/docling-project/docling-serve@sha256:c2ba5f78e87cdc791bff9817258c3a80d6aa3ee82bb4850dcc8872ace6ea1f74
+    environment:
+      DOCLING_SERVE_HOST: 0.0.0.0
+      DOCLING_SERVE_MAX_SYNC_WAIT: '540'
+      DOCLING_SERVE_PORT: '5001'
+    healthcheck:
+      <<: *health-defaults
+      retries: 30
+      start_period: 300s
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/health', timeout=2)"
+    logging: *logging
+    networks:
+      - careos-internal
+
+  novu:
+    <<: *restart-policy
+    image: ghcr.io/novuhq/novu/api:2.2.0@sha256:1df5783020712b52bb7d57e6248423f3bd91556e7cfbe3462d9aa4a715c55275
+    profiles:
+      - novu-optional
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      API_ROOT_URL: http://novu:3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-careos}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/novu
+      JWT_SECRET: ${NOVU_JWT_SECRET:-change-me}
+      NODE_ENV: production
+      PORT: '3000'
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-me}
+      REDIS_PORT: '6379'
+      STORE_ENCRYPTION_KEY: ${NOVU_STORE_ENCRYPTION_KEY:-change-me-32-byte-placeholder}
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - wget -q -O- http://127.0.0.1:3000/v1/health-check >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+
+  mattermost:
+    <<: *restart-policy
+    image: mattermost/mattermost-team-edition:10.5@sha256:e42ce95b1217d8ff178dad8d2ce1cb65e72ad7e19438ad3c32221cf5ad3918d2
+    profiles:
+      - mattermost-optional
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MM_SERVICESETTINGS_SITEURL: https://${PUBLIC_HOSTNAME:-localhost}/mattermost
+      MM_SQLSETTINGS_DATASOURCE: postgres://${POSTGRES_USER:-careos}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/mattermost?sslmode=disable&connect_timeout=10
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      TZ: ${TZ:-Europe/London}
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - curl -fsS http://127.0.0.1:8065/api/v4/system/ping >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+    ports:
+      - ${MATTERMOST_PORT:-8065}:8065
+    volumes:
+      - mattermost-config:/mattermost/config
+      - mattermost-data:/mattermost/data
+      - mattermost-logs:/mattermost/logs
+      - mattermost-plugins:/mattermost/plugins
+
+  otel-collector:
+    <<: *restart-policy
+    image: otel/opentelemetry-collector-contrib:0.157.0@sha256:f2f01157055a9b2aab9df7118e1f1c9abf345e99b23bc7a2bc791db374a7d0f6
+    command:
+      - --config=/etc/otelcol-contrib/config.yaml
+    depends_on:
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD
+        - /otelcol-contrib
+        - --version
+    logging: *logging
+    networks:
+      - careos-internal
+    volumes:
+      - ../otel/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+
+  grafana:
+    <<: *restart-policy
+    image: grafana/grafana-oss:11.6.1@sha256:52c3e20686b860c6dc1f623811565773cf51eefa378817a4896dfc863c3c82c8
+    depends_on:
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SERVER_ROOT_URL: https://${PUBLIC_HOSTNAME:-localhost}/grafana
+      GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - wget -q -O- http://127.0.0.1:3000/api/health >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
+
+  loki:
+    <<: *restart-policy
+    image: grafana/loki:3.4.2@sha256:58a6c186ce78ba04d58bfe2a927eff296ba733a430df09645d56cdc158f3ba08
+    command:
+      - -config.file=/etc/loki/loki.yaml
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - wget -q -O- http://127.0.0.1:3100/ready >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+    volumes:
+      - loki-data:/loki
+      - ../loki/loki.yaml:/etc/loki/loki.yaml:ro
+
+  tempo:
+    <<: *restart-policy
+    image: grafana/tempo:2.7.2@sha256:4b0277a9b572a4b1fa43b01468e58911ec214dd69d033f2cd476596d14de9fe3
+    command:
+      - -config.file=/etc/tempo/tempo.yaml
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - wget -q -O- http://127.0.0.1:3200/ready >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+    volumes:
+      - tempo-data:/var/tempo
+      - ../tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+
+  prometheus:
+    <<: *restart-policy
+    image: prom/prometheus:v3.2.1@sha256:6927e0919a144aa7616fd0137d4816816d42f6b816de3af269ab065250859a62
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - wget -q -O- http://127.0.0.1:9090/-/healthy >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+    volumes:
+      - prometheus-data:/prometheus
+      - ../prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+
+  ollama:
+    image: ollama/ollama:0.6.8@sha256:50ab2378567a62b811a2967759dd91f254864c3495cbe50576bd8a85bc6edd56
+    profiles:
+      - llm
+    environment:
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-10m}
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD
+        - ollama
+        - list
+    logging: *logging
+    networks:
+      - careos-internal
+    volumes:
+      - ollama-data:/root/.ollama
+
+  ollama-pull:
+    image: ollama/ollama:0.6.8@sha256:50ab2378567a62b811a2967759dd91f254864c3495cbe50576bd8a85bc6edd56
+    profiles:
+      - llm
+    restart: 'no'
+    entrypoint:
+      - /bin/sh
+      - -ec
+    command:
+      - |
+        ollama pull "$${CAREOS_LLM_MODEL}"
+        model_name="$${CAREOS_LLM_MODEL%%:*}"
+        model_tag="$${CAREOS_LLM_MODEL#*:}"
+        test -n "$${model_name}" && test -n "$${model_tag}" && test "$${model_name}:$${model_tag}" = "$${CAREOS_LLM_MODEL}"
+        manifest="/root/.ollama/models/manifests/registry.ollama.ai/library/$${model_name}/$${model_tag}"
+        test -f "$${manifest}"
+        actual="sha256:$$(sha256sum "$${manifest}" | cut -d' ' -f1)"
+        test "$${actual}" = "$${OLLAMA_MODEL_MANIFEST_DIGEST}"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      CAREOS_LLM_MODEL: ${CAREOS_LLM_MODEL:-qwen2.5:0.5b-instruct}
+      OLLAMA_MODEL_MANIFEST_DIGEST: ${OLLAMA_MODEL_MANIFEST_DIGEST:-sha256:a8b0c51577010a279d933d14c2a8ab4b268079d44c5c8830c0a93900f1827c67}
+      OLLAMA_HOST: http://ollama:11434
+    logging: *logging
+    networks:
+      - careos-internal
+    volumes:
+      - ollama-data:/root/.ollama
+
+  llm-gateway:
+    <<: *restart-policy
+    build:
+      context: ../..
+      dockerfile: apps/llm-gateway/Dockerfile
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      AZURE_AI_INFERENCE_ENDPOINT: ${AZURE_AI_INFERENCE_ENDPOINT:-https://example.services.ai.azure.com}
+      AZURE_AI_INFERENCE_KEY: ${AZURE_AI_INFERENCE_KEY:-change-me}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-change-me}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-2024-10-21}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-https://example.openai.azure.com}
+      CAREOS_LLM_MODEL: ${CAREOS_LLM_MODEL:-qwen2.5:0.5b-instruct}
+      CAREOS_LLM_PROVIDER: ${CAREOS_LLM_PROVIDER:-ollama}
+      LLM_GATEWAY_MONTHLY_TOKEN_BUDGET: ${LLM_GATEWAY_MONTHLY_TOKEN_BUDGET:-1000000}
+      LLM_GATEWAY_SERVICE_TOKEN: ${LLM_GATEWAY_SERVICE_TOKEN:-change-me}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_SERVICE_NAME: llm-gateway
+      OTEL_SERVICE_NAMESPACE: ${OTEL_SERVICE_NAMESPACE:-careos}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-me}
+      REDIS_URL: redis://default:${REDIS_PASSWORD:-change-me}@redis:6379/0
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - wget -q -O- http://127.0.0.1:8080/health >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+
+  caddy:
+    <<: *restart-policy
+    build:
+      context: ../caddy
+      dockerfile: Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      temporal-ui:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    environment:
+      PUBLIC_HOSTNAME: ${PUBLIC_HOSTNAME:-localhost}
+    healthcheck:
+      <<: *health-defaults
+      test:
+        - CMD-SHELL
+        - wget -q -O- http://127.0.0.1/health >/dev/null
+    logging: *logging
+    networks:
+      - careos-internal
+    ports:
+      - ${CADDY_HTTP_PORT:-80}:80
+      - ${CADDY_HTTPS_PORT:-443}:443
+    volumes:
+      - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+networks:
+  careos-internal:
+    name: ${COMPOSE_PROJECT_NAME:-careos}-internal
+
+volumes:
+  caddy-config:
+  caddy-data:
+  grafana-data:
+  loki-data:
+  mattermost-config:
+  mattermost-data:
+  mattermost-logs:
+  mattermost-plugins:
+  minio-data:
+  ollama-data:
+  postgres-data:
+  prometheus-data:
+  redis-data:
+  temporal-data:
+  tempo-data:

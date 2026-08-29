@@ -1,0 +1,17 @@
+[project]
+name = "careos-agent"
+version = "0.0.0"
+license = "Apache-2.0"
+description = "Hermes Agent configuration and skills for Kid-OS. The container builds atop the upstream Hermes image; this directory ships configuration and skill manifests."
+requires-python = ">=3.11"
+dependencies = ["jsonschema>=4.23,<5", "PyYAML>=6,<7"]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9"]
+
+[tool.setuptools.packages.find]
+include = ["careos_agent*", "skills*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

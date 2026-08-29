@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://careos.local/schemas/handover.shift-end.v1.json",
+  "title": "Shift-End Handover",
+  "description": "Phase 2 — stub schema seeded in Phase 1 so the template catalogue is stable.",
+  "type": "object",
+  "required": ["shiftId", "endedAt", "narrative"],
+  "properties": {
+    "shiftId": { "type": "string", "format": "uuid", "title": "Shift", "x-mandatory": true },
+    "endedAt": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Shift ended at",
+      "x-mandatory": true
+    },
+    "narrative": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 8000,
+      "title": "Free-text handover",
+      "x-mandatory": true
+    },
+    "residentsRequiringFollowUp": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["residentId", "note"],
+        "properties": {
+          "residentId": { "type": "string", "format": "uuid" },
+          "note": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "priority": { "type": "string", "enum": ["low", "medium", "high"], "default": "medium" }
+        }
+      },
+      "default": []
+    },
+    "openTasks": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "default": []
+    }
+  },
+  "additionalProperties": false
+}

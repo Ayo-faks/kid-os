@@ -1,0 +1,60 @@
+name: Bug report
+description: Report reproducible incorrect behavior using synthetic data only.
+title: 'bug: '
+labels:
+  - bug
+body:
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data-safety confirmation
+      options:
+        - label: This report contains no real child, resident, staff, home, incident, credential, log, trace, or database data.
+          required: true
+        - label: This is not a security vulnerability or conduct report.
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version
+      description: Provide the full commit SHA or release version where possible.
+      placeholder: 0123456789abcdef0123456789abcdef01234567
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, architecture, Node, pnpm, Docker, browser, and relevant public configuration.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Use synthetic fixtures and include exact commands or steps.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional sanitized context
+      description: Do not attach raw logs, screenshots, traces, exports, or dumps unless they are demonstrably synthetic.

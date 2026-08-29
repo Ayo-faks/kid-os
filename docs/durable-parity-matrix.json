@@ -1,0 +1,195 @@
+{
+  "$schema": "./durable-parity-matrix.schema.json",
+  "$comment": "Implementation and executable-test inventory only. No workflow may be marked passed until same-SHA managed DTS evidence exists.",
+  "schemaVersion": 1,
+  "status": "pending-managed-staging",
+  "workflows": [
+    {
+      "id": "approval-routing",
+      "temporal": "apps/worker/src/workflows/approval-routing.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/approval-routing.orchestrator.ts",
+      "emulatorTest": "apps/worker/src/durable/approval-routing.emulator.integration.test.ts",
+      "branches": [
+        "early-event-buffering",
+        "dual-sign-off",
+        "late-event-drop",
+        "persisted-owner-routing"
+      ],
+      "managedEvidence": null
+    },
+    {
+      "id": "document-ingest",
+      "temporal": "apps/worker/src/workflows/doc-ingest.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/document-ingest.orchestrator.ts",
+      "emulatorTest": "apps/worker/src/durable/document-ingest.emulator.integration.test.ts",
+      "branches": ["id-only-input", "terminal-persistence", "failure-finalization"],
+      "managedEvidence": null
+    },
+    {
+      "id": "email-draft",
+      "temporal": "apps/worker/src/workflows/email-draft.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/email-draft.orchestrator.ts",
+      "emulatorTest": "apps/worker/src/durable/email-draft.emulator.integration.test.ts",
+      "branches": ["routine-draft", "prepared-draft", "validation-failure", "approval-routing"],
+      "managedEvidence": null
+    },
+    {
+      "id": "export-bundle",
+      "temporal": "apps/worker/src/workflows/serious-incident-export.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/export-bundle.orchestrator.ts",
+      "emulatorTest": "apps/worker/src/durable/export-bundle.emulator.integration.test.ts",
+      "branches": ["id-only-input", "ready", "failure-finalization", "object-reconciliation"],
+      "managedEvidence": null
+    },
+    {
+      "id": "handover",
+      "temporal": "apps/worker/src/workflows/handover.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/handover.orchestrator.ts",
+      "emulatorTest": "apps/worker/src/durable/handover.emulator.integration.test.ts",
+      "branches": ["id-only-command", "completed", "failure-finalization"],
+      "managedEvidence": null
+    },
+    {
+      "id": "handover-due-reminder",
+      "temporal": "apps/worker/src/workflows/handover-due-reminder.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/handover-due-reminder.orchestrators.ts",
+      "emulatorTest": "apps/worker/src/durable/handover-due-reminder.emulator.integration.test.ts",
+      "branches": ["singleton-schedule", "sweep", "detached-delivery", "idempotent-delivery"],
+      "managedEvidence": null
+    },
+    {
+      "id": "incident-follow-up",
+      "temporal": "apps/worker/src/workflows/incident-follow-up-action.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/incident-follow-up.orchestrator.ts",
+      "emulatorTest": "apps/worker/src/durable/incident-follow-up.emulator.integration.test.ts",
+      "branches": [
+        "export-follow-up",
+        "safeguarding-email",
+        "needs-configuration",
+        "failure-finalization"
+      ],
+      "managedEvidence": null
+    },
+    {
+      "id": "incident-report",
+      "temporal": "apps/worker/src/workflows/incident-report.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/incident-report.orchestrator.ts",
+      "emulatorTest": "apps/worker/src/durable/incident-report.emulator.integration.test.ts",
+      "branches": [
+        "draft",
+        "missing-fields",
+        "approval-child",
+        "human-veto",
+        "export",
+        "persisted-owner-routing"
+      ],
+      "managedEvidence": null
+    },
+    {
+      "id": "missing-fields-audit",
+      "temporal": "apps/worker/src/workflows/missing-fields-audit.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/missing-fields-audit.orchestrators.ts",
+      "emulatorTest": "apps/worker/src/durable/missing-fields-audit.emulator.integration.test.ts",
+      "branches": ["singleton-schedule", "sweep", "no-missing-fields", "detached-delivery"],
+      "managedEvidence": null
+    },
+    {
+      "id": "ping",
+      "temporal": "apps/worker/src/workflows/ping.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/ping.orchestrator.ts",
+      "emulatorTest": "apps/worker/src/durable/ping.emulator.integration.test.ts",
+      "branches": ["opaque-command", "operational-status-only", "failure-finalization"],
+      "managedEvidence": null
+    },
+    {
+      "id": "retention",
+      "temporal": "apps/worker/src/workflows/retention-sweep.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/retention.orchestrators.ts",
+      "emulatorTest": "apps/worker/src/durable/retention.emulator.integration.test.ts",
+      "branches": [
+        "singleton-schedule",
+        "aggregate-only-sweep",
+        "object-delete",
+        "failure-finalization"
+      ],
+      "managedEvidence": null
+    },
+    {
+      "id": "rota-analyze",
+      "temporal": "apps/worker/src/workflows/rota-analyze.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/rota-analyze.orchestrator.ts",
+      "emulatorTest": "apps/worker/src/durable/rota-analyze.emulator.integration.test.ts",
+      "branches": [
+        "id-only-input",
+        "result-persistence",
+        "malformed-result-rejection",
+        "failure-finalization"
+      ],
+      "managedEvidence": null
+    },
+    {
+      "id": "rota-publish",
+      "temporal": "apps/worker/src/workflows/rota-publish.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/rota-publish.orchestrator.ts",
+      "emulatorTest": "apps/worker/src/durable/rota-publish.emulator.integration.test.ts",
+      "branches": ["id-only-command", "publication-persistence", "failure-finalization"],
+      "managedEvidence": null
+    },
+    {
+      "id": "safeguarding-digest",
+      "temporal": "apps/worker/src/workflows/safeguarding-digest.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/safeguarding-digest.orchestrators.ts",
+      "emulatorTest": "apps/worker/src/durable/safeguarding-digest.emulator.integration.test.ts",
+      "branches": [
+        "singleton-schedule",
+        "aggregate-only-sweep",
+        "detached-delivery",
+        "audit-idempotency"
+      ],
+      "managedEvidence": null
+    },
+    {
+      "id": "shift-reminder",
+      "temporal": "apps/worker/src/workflows/shift-reminder.workflow.ts",
+      "durable": "apps/worker/src/durable/orchestrators/shift-reminder.orchestrators.ts",
+      "emulatorTest": "apps/worker/src/durable/shift-reminder.emulator.integration.test.ts",
+      "branches": [
+        "singleton-schedule",
+        "eternal-timer",
+        "sweep",
+        "detached-delivery",
+        "termination"
+      ],
+      "managedEvidence": null
+    }
+  ],
+  "crossCuttingSuites": [
+    {
+      "id": "recovery",
+      "test": "apps/worker/src/durable/recovery.emulator.integration.test.ts",
+      "branches": [
+        "worker-restart",
+        "side-effect-reconciliation",
+        "database-retry",
+        "cancellation",
+        "suspend-resume",
+        "termination"
+      ]
+    },
+    {
+      "id": "side-effects",
+      "test": "apps/worker/src/durable/side-effects.emulator.integration.test.ts",
+      "branches": ["idempotent-or-reconcilable-effects"]
+    },
+    {
+      "id": "tenant-idempotency",
+      "test": "apps/worker/src/durable/tenant-idempotency.emulator.integration.test.ts",
+      "branches": ["duplicate-start", "duplicate-event", "tenant-isolation"]
+    },
+    {
+      "id": "versioning",
+      "test": "apps/worker/src/durable/versioning.emulator.integration.test.ts",
+      "branches": ["v1-in-flight", "v2-new-start", "retirement-block"]
+    }
+  ]
+}

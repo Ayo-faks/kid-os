@@ -1,0 +1,517 @@
+{
+  "schemaVersion": 1,
+  "resolvedAt": "2026-08-05T08:23:22.425Z",
+  "artifacts": [
+    {
+      "key": "dts-emulator",
+      "source": "mcr.microsoft.com/dts/dts-emulator@sha256:cd92ebc92bd688ad790b38f49d6c72ad68b1c6f025bb401ea7cb486368afb6af",
+      "digest": "sha256:cd92ebc92bd688ad790b38f49d6c72ad68b1c6f025bb401ea7cb486368afb6af",
+      "registry": "mcr.microsoft.com",
+      "repository": "dts/dts-emulator",
+      "sourceTag": null,
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": ["linux/amd64", "linux/arm64"],
+      "requiredPlatforms": ["linux/amd64"],
+      "usedBy": ["infra/compose/docker-compose.yml#dts-emulator"],
+      "resolvedAt": "2026-07-24T07:30:52.926Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:30:52.817Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "redis",
+      "source": "docker.io/library/redis:7.4-alpine",
+      "digest": "sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2",
+      "registry": "docker.io",
+      "repository": "library/redis",
+      "sourceTag": "7.4-alpine",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": [
+        "linux/386",
+        "linux/amd64",
+        "linux/arm",
+        "linux/arm64",
+        "linux/ppc64le",
+        "linux/riscv64",
+        "linux/s390x"
+      ],
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/compose/docker-compose.yml#redis"],
+      "resolvedAt": "2026-07-26T07:57:12.745Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-26T07:57:12.268Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "postgres",
+      "source": "docker.io/pgvector/pgvector:pg16",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/compose/docker-compose.yml#postgres", "apps/api Testcontainers"],
+      "digest": "sha256:a36250871de0833b8757561c72f2477ef1ddd1101afa4e617fb552e0de514c6b",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": ["linux/amd64", "linux/arm64"],
+      "registry": "docker.io",
+      "repository": "pgvector/pgvector",
+      "sourceTag": "pg16",
+      "resolvedAt": "2026-07-30T11:45:28.676Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-30T11:45:28.676Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "keycloak",
+      "source": "quay.io/keycloak/keycloak:26.7.0",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/keycloak/Dockerfile"],
+      "digest": "sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": ["linux/amd64", "linux/arm64", "linux/ppc64le"],
+      "registry": "quay.io",
+      "repository": "keycloak/keycloak",
+      "sourceTag": "26.7.0",
+      "resolvedAt": "2026-07-26T17:32:39.873Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-26T17:32:39.461Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "minio",
+      "source": "quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/compose/docker-compose.yml#minio"],
+      "digest": "sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e",
+      "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+      "platforms": ["linux/amd64", "linux/arm64", "linux/ppc64le"],
+      "registry": "quay.io",
+      "repository": "minio/minio",
+      "sourceTag": "RELEASE.2025-04-22T22-12-26Z",
+      "resolvedAt": "2026-07-24T07:30:55.340Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:30:55.216Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "minio-client",
+      "source": "quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/compose/docker-compose.yml#minio-init"],
+      "digest": "sha256:aead63c77f9db9107f1696fb08ecb0faeda23729cde94b0f663edf4fe09728e3",
+      "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+      "platforms": ["linux/amd64", "linux/arm64", "linux/ppc64le"],
+      "registry": "quay.io",
+      "repository": "minio/mc",
+      "sourceTag": "RELEASE.2025-04-16T18-13-26Z",
+      "resolvedAt": "2026-07-24T07:30:55.600Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:30:55.476Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "temporal",
+      "source": "docker.io/temporalio/auto-setup:1.27.2",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": [
+        "infra/compose/docker-compose.yml#temporal",
+        "infra/terraform/container-app-vendors.tf"
+      ],
+      "digest": "sha256:b44cbfeb43dbeae42db113b44fb8414c3452f05643b3d6b1592f955277d73526",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": ["linux/amd64", "linux/arm64"],
+      "registry": "docker.io",
+      "repository": "temporalio/auto-setup",
+      "sourceTag": "1.27.2",
+      "resolvedAt": "2026-07-24T07:30:56.006Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:30:55.901Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "temporal-ui",
+      "source": "docker.io/temporalio/ui:2.37.2",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/compose/docker-compose.yml#temporal-ui"],
+      "digest": "sha256:3d7b36849d7ca5245f59f6ab558bebbd6b83aa1518f4505e97927419360d1f25",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": ["linux/amd64", "linux/arm64"],
+      "registry": "docker.io",
+      "repository": "temporalio/ui",
+      "sourceTag": "2.37.2",
+      "resolvedAt": "2026-07-24T07:30:56.418Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:30:56.314Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "gotenberg",
+      "source": "docker.io/gotenberg/gotenberg:8.15",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": [
+        "infra/compose/docker-compose.yml#gotenberg",
+        "infra/terraform/container-app-vendors.tf"
+      ],
+      "digest": "sha256:cec2b75259ea1828bc473521b83c1d4e4a6c45209c56bd6bb0f98f79c071e70d",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": ["linux/386", "linux/amd64", "linux/arm", "linux/arm64"],
+      "registry": "docker.io",
+      "repository": "gotenberg/gotenberg",
+      "sourceTag": "8.15",
+      "resolvedAt": "2026-07-24T07:30:56.869Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:30:56.768Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "docling",
+      "source": "ghcr.io/docling-project/docling-serve@sha256:c2ba5f78e87cdc791bff9817258c3a80d6aa3ee82bb4850dcc8872ace6ea1f74",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": [
+        "infra/compose/docker-compose.yml#docling-serve",
+        "infra/terraform/container-app-vendors.tf"
+      ],
+      "digest": "sha256:c2ba5f78e87cdc791bff9817258c3a80d6aa3ee82bb4850dcc8872ace6ea1f74",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": ["linux/amd64", "linux/arm64"],
+      "registry": "ghcr.io",
+      "repository": "docling-project/docling-serve",
+      "sourceTag": null,
+      "resolvedAt": "2026-07-24T07:30:57.434Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:30:57.239Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "registry-http-404"
+      }
+    },
+    {
+      "key": "novu",
+      "source": "ghcr.io/novuhq/novu/api:2.2.0",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/compose/docker-compose.yml#novu"],
+      "optionalService": {
+        "profile": "novu-optional",
+        "reason": "Novu is not required by the release smoke or Azure staging runtime"
+      },
+      "digest": "sha256:1df5783020712b52bb7d57e6248423f3bd91556e7cfbe3462d9aa4a715c55275",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": ["linux/amd64", "linux/arm64"],
+      "registry": "ghcr.io",
+      "repository": "novuhq/novu/api",
+      "sourceTag": "2.2.0",
+      "resolvedAt": "2026-07-24T07:30:57.987Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:30:57.896Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "registry-http-404"
+      }
+    },
+    {
+      "key": "mattermost",
+      "source": "docker.io/mattermost/mattermost-team-edition:10.5",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "platformException": {
+        "allowedMissingPlatforms": ["linux/arm64"],
+        "handling": "optional Compose profile; known arm64 emulation failure; not used by Azure staging"
+      },
+      "optionalService": {
+        "profile": "mattermost-optional",
+        "reason": "Mattermost is not required by Azure staging and is unsupported on local arm64"
+      },
+      "usedBy": ["infra/compose/docker-compose.yml#mattermost"],
+      "digest": "sha256:e42ce95b1217d8ff178dad8d2ce1cb65e72ad7e19438ad3c32221cf5ad3918d2",
+      "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+      "platforms": ["linux/amd64"],
+      "registry": "docker.io",
+      "repository": "mattermost/mattermost-team-edition",
+      "sourceTag": "10.5",
+      "resolvedAt": "2026-07-24T07:30:58.562Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:30:58.458Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "otel-collector",
+      "source": "docker.io/otel/opentelemetry-collector-contrib:0.157.0",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/compose/docker-compose.yml#otel-collector", "infra/otel/Dockerfile"],
+      "digest": "sha256:f2f01157055a9b2aab9df7118e1f1c9abf345e99b23bc7a2bc791db374a7d0f6",
+      "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+      "platforms": [
+        "linux/386",
+        "linux/amd64",
+        "linux/arm",
+        "linux/arm64",
+        "linux/ppc64le",
+        "linux/riscv64",
+        "linux/s390x"
+      ],
+      "registry": "docker.io",
+      "repository": "otel/opentelemetry-collector-contrib",
+      "sourceTag": "0.157.0",
+      "resolvedAt": "2026-07-26T16:16:21.496Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-26T16:16:21.371Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "grafana",
+      "source": "docker.io/grafana/grafana-oss:11.6.1",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/compose/docker-compose.yml#grafana"],
+      "digest": "sha256:52c3e20686b860c6dc1f623811565773cf51eefa378817a4896dfc863c3c82c8",
+      "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+      "platforms": ["linux/amd64", "linux/arm", "linux/arm64"],
+      "registry": "docker.io",
+      "repository": "grafana/grafana-oss",
+      "sourceTag": "11.6.1",
+      "resolvedAt": "2026-07-24T07:30:59.446Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:30:59.343Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "loki",
+      "source": "docker.io/grafana/loki:3.4.2",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/compose/docker-compose.yml#loki"],
+      "digest": "sha256:58a6c186ce78ba04d58bfe2a927eff296ba733a430df09645d56cdc158f3ba08",
+      "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+      "platforms": ["linux/amd64", "linux/arm", "linux/arm64"],
+      "registry": "docker.io",
+      "repository": "grafana/loki",
+      "sourceTag": "3.4.2",
+      "resolvedAt": "2026-07-24T07:30:59.858Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:30:59.753Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "tempo",
+      "source": "docker.io/grafana/tempo:2.7.2",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/compose/docker-compose.yml#tempo"],
+      "digest": "sha256:4b0277a9b572a4b1fa43b01468e58911ec214dd69d033f2cd476596d14de9fe3",
+      "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+      "platforms": ["linux/amd64", "linux/arm64"],
+      "registry": "docker.io",
+      "repository": "grafana/tempo",
+      "sourceTag": "2.7.2",
+      "resolvedAt": "2026-07-24T07:31:00.272Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:31:00.166Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "prometheus",
+      "source": "docker.io/prom/prometheus:v3.2.1",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/compose/docker-compose.yml#prometheus"],
+      "digest": "sha256:6927e0919a144aa7616fd0137d4816816d42f6b816de3af269ab065250859a62",
+      "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+      "platforms": ["linux/amd64", "linux/arm", "linux/arm64", "linux/ppc64le", "linux/s390x"],
+      "registry": "docker.io",
+      "repository": "prom/prometheus",
+      "sourceTag": "v3.2.1",
+      "resolvedAt": "2026-07-24T07:31:00.691Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:31:00.578Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "ollama",
+      "source": "docker.io/ollama/ollama:0.6.8",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": [
+        "infra/compose/docker-compose.yml#ollama",
+        "infra/compose/docker-compose.yml#ollama-pull",
+        "infra/terraform/container-app-vendors.tf"
+      ],
+      "digest": "sha256:50ab2378567a62b811a2967759dd91f254864c3495cbe50576bd8a85bc6edd56",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": ["linux/amd64", "linux/arm64"],
+      "registry": "docker.io",
+      "repository": "ollama/ollama",
+      "sourceTag": "0.6.8",
+      "resolvedAt": "2026-07-24T07:31:01.164Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-24T07:31:01.061Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "go-builder",
+      "source": "docker.io/library/golang:1.26.5-alpine3.23",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/caddy/Dockerfile", "infra/validation/Dockerfile"],
+      "digest": "sha256:622e56dbc11a8cfe87cafa2331e9a201877271cbff918af53d3be315f3da88cc",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": [
+        "linux/386",
+        "linux/amd64",
+        "linux/arm",
+        "linux/arm64",
+        "linux/ppc64le",
+        "linux/riscv64",
+        "linux/s390x"
+      ],
+      "registry": "docker.io",
+      "repository": "library/golang",
+      "sourceTag": "1.26.5-alpine3.23",
+      "resolvedAt": "2026-07-26T12:35:00.000Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-26T12:35:00.000Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "caddy-runtime",
+      "source": "docker.io/library/alpine:3.23",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["infra/caddy/Dockerfile"],
+      "digest": "sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": [
+        "linux/386",
+        "linux/amd64",
+        "linux/arm",
+        "linux/arm64",
+        "linux/ppc64le",
+        "linux/riscv64",
+        "linux/s390x"
+      ],
+      "registry": "docker.io",
+      "repository": "library/alpine",
+      "sourceTag": "3.23",
+      "resolvedAt": "2026-07-26T12:35:00.000Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-07-26T12:35:00.000Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "node",
+      "source": "docker.io/library/node@sha256:235600a8101ab264e117b1768e925532262668dc9b581ef1dd7d96ced463b8e7",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": [
+        "apps/api/Dockerfile",
+        "apps/worker/Dockerfile",
+        "apps/web/Dockerfile",
+        "apps/llm-gateway/Dockerfile",
+        "infra/validation/Dockerfile"
+      ],
+      "digest": "sha256:235600a8101ab264e117b1768e925532262668dc9b581ef1dd7d96ced463b8e7",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": ["linux/amd64", "linux/arm64", "linux/ppc64le"],
+      "registry": "docker.io",
+      "repository": "library/node",
+      "sourceTag": null,
+      "resolvedAt": "2026-08-04T07:34:01.043Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-08-04T07:34:00.662Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    },
+    {
+      "key": "python",
+      "source": "docker.io/library/python:3.12-slim",
+      "requiredPlatforms": ["linux/amd64", "linux/arm64"],
+      "usedBy": ["apps/agent/Dockerfile"],
+      "digest": "sha256:229a2c5bfa27522db7815ea81f9bed70af17ccb9de9fc7ad142b1877b5830d36",
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "platforms": [
+        "linux/386",
+        "linux/amd64",
+        "linux/arm",
+        "linux/arm64",
+        "linux/ppc64le",
+        "linux/riscv64",
+        "linux/s390x"
+      ],
+      "registry": "docker.io",
+      "repository": "library/python",
+      "sourceTag": "3.12-slim",
+      "resolvedAt": "2026-08-05T08:23:22.425Z",
+      "upstreamVerification": {
+        "artifactTypes": [],
+        "checkedAt": "2026-08-05T08:23:22.126Z",
+        "method": "oci-referrers-api",
+        "referrerCount": 0,
+        "status": "none-published"
+      }
+    }
+  ]
+}

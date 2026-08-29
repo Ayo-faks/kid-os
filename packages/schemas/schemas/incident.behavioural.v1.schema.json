@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://careos.local/schemas/incident.behavioural.v1.json",
+  "title": "Behavioural Incident",
+  "type": "object",
+  "required": [
+    "residentId",
+    "occurredAt",
+    "location",
+    "summary",
+    "behaviourType",
+    "triggers",
+    "responseTaken",
+    "outcomeForResident"
+  ],
+  "properties": {
+    "residentId": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Resident",
+      "x-mandatory": true
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "title": "When did it happen?",
+      "x-mandatory": true
+    },
+    "location": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "title": "Where did it happen?",
+      "x-mandatory": true
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000,
+      "title": "What happened?",
+      "description": "Factual, non-judgemental account in the staff member's own words.",
+      "x-mandatory": true
+    },
+    "behaviourType": {
+      "type": "string",
+      "enum": [
+        "verbal_aggression",
+        "physical_aggression_to_staff",
+        "physical_aggression_to_peer",
+        "self_harm",
+        "property_damage",
+        "absconding",
+        "non_compliance",
+        "other"
+      ],
+      "title": "Behaviour type",
+      "x-mandatory": true
+    },
+    "triggers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+      "minItems": 1,
+      "title": "Known or suspected triggers",
+      "x-mandatory": true
+    },
+    "responseTaken": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 2000,
+      "title": "How did staff respond?",
+      "description": "Include any de-escalation steps and whether physical intervention was used.",
+      "x-mandatory": true
+    },
+    "physicalInterventionUsed": {
+      "type": "boolean",
+      "title": "Physical intervention used?",
+      "default": false
+    },
+    "physicalInterventionDetail": {
+      "type": "string",
+      "maxLength": 2000,
+      "title": "Physical intervention detail"
+    },
+    "injuries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["who", "description"],
+        "properties": {
+          "who": { "type": "string", "enum": ["resident", "staff", "peer", "other"] },
+          "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "firstAidGiven": { "type": "boolean", "default": false }
+        }
+      },
+      "default": []
+    },
+    "outcomeForResident": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 1000,
+      "title": "Outcome for the young person",
+      "x-mandatory": true
+    },
+    "witnesses": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 120 },
+      "default": []
+    },
+    "safeguardingConcern": {
+      "type": "boolean",
+      "title": "Does this raise a safeguarding concern?",
+      "default": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "physicalInterventionUsed": { "const": true } },
+        "required": ["physicalInterventionUsed"]
+      },
+      "then": { "required": ["physicalInterventionDetail"] }
+    }
+  ],
+  "additionalProperties": false
+}

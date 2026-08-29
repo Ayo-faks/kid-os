@@ -1,0 +1,30 @@
+{
+  "name": "@careos/object-storage",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@azure/core-auth": "^1.10.1",
+    "@azure/identity": "^4.13.0",
+    "@azure/storage-blob": "^12.29.1",
+    "minio": "^8.0.5"
+  },
+  "devDependencies": {
+    "@careos/tsconfig": "workspace:*",
+    "@types/node": "^22.7.4",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.2"
+  }
+}

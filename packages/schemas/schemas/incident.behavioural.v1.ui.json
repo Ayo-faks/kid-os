@@ -1,0 +1,46 @@
+{
+  "$id": "https://careos.local/schemas/incident.behavioural.v1.ui.json",
+  "order": [
+    "residentId",
+    "occurredAt",
+    "location",
+    "behaviourType",
+    "summary",
+    "triggers",
+    "responseTaken",
+    "physicalInterventionUsed",
+    "physicalInterventionDetail",
+    "injuries",
+    "outcomeForResident",
+    "witnesses",
+    "safeguardingConcern"
+  ],
+  "widgets": {
+    "residentId": { "widget": "resident-picker" },
+    "occurredAt": { "widget": "datetime" },
+    "location": { "widget": "text", "placeholder": "e.g. Lounge, Bedroom 3, school transport" },
+    "summary": { "widget": "textarea", "rows": 6 },
+    "behaviourType": { "widget": "select" },
+    "triggers": { "widget": "tag-input", "placeholder": "Add trigger and press Enter" },
+    "responseTaken": { "widget": "textarea", "rows": 4 },
+    "physicalInterventionUsed": { "widget": "toggle" },
+    "physicalInterventionDetail": {
+      "widget": "textarea",
+      "rows": 3,
+      "visibleWhen": { "field": "physicalInterventionUsed", "equals": true }
+    },
+    "injuries": { "widget": "repeating-group" },
+    "outcomeForResident": { "widget": "textarea", "rows": 3 },
+    "witnesses": { "widget": "tag-input" },
+    "safeguardingConcern": { "widget": "toggle" }
+  },
+  "sections": [
+    { "title": "Basics", "fields": ["residentId", "occurredAt", "location", "behaviourType"] },
+    { "title": "What happened", "fields": ["summary", "triggers", "responseTaken"] },
+    {
+      "title": "Intervention",
+      "fields": ["physicalInterventionUsed", "physicalInterventionDetail", "injuries"]
+    },
+    { "title": "Outcome", "fields": ["outcomeForResident", "witnesses", "safeguardingConcern"] }
+  ]
+}

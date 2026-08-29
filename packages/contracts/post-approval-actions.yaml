@@ -1,0 +1,10 @@
+version: 1
+subjects:
+  incident:
+    default_actions: []
+    conditional:
+      - when:
+          safeguarding: true
+        actions:
+          - safeguarding_email
+          - export_bundle

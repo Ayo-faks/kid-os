@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - allowUiUpdates: false
+    disableDeletion: false
+    folder: CareOS
+    name: careos-dashboards
+    options:
+      path: /var/lib/grafana/dashboards
+    type: file

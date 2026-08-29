@@ -1,0 +1,8 @@
+{
+  "docling": "ghcr.io/docling-project/docling-serve@sha256:c2ba5f78e87cdc791bff9817258c3a80d6aa3ee82bb4850dcc8872ace6ea1f74",
+  "gotenberg": "docker.io/gotenberg/gotenberg@sha256:cec2b75259ea1828bc473521b83c1d4e4a6c45209c56bd6bb0f98f79c071e70d",
+  "minio": "quay.io/minio/minio@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e",
+  "ollama": "docker.io/ollama/ollama@sha256:50ab2378567a62b811a2967759dd91f254864c3495cbe50576bd8a85bc6edd56",
+  "temporal": "docker.io/temporalio/auto-setup@sha256:b44cbfeb43dbeae42db113b44fb8414c3452f05643b3d6b1592f955277d73526",
+  "temporal-ui": "docker.io/temporalio/ui@sha256:3d7b36849d7ca5245f59f6ab558bebbd6b83aa1518f4505e97927419360d1f25"
+}

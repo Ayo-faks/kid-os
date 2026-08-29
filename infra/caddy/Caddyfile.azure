@@ -1,0 +1,80 @@
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	encode zstd gzip
+
+	header {
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+	}
+
+	handle /health {
+		respond "ok" 200
+	}
+
+	handle /ready {
+		reverse_proxy https://{$API_HOST} {
+			header_up Host {$API_HOST}
+		}
+	}
+
+	handle /api/auth/* {
+		reverse_proxy https://{$WEB_HOST} {
+			header_up Host {$WEB_HOST}
+		}
+	}
+
+	@web_bff {
+		path /api/approvals* /api/assistant/* /api/automations/* /api/comms/* /api/documents* /api/export-bundles* /api/handovers* /api/incidents* /api/reports* /api/retention/* /api/rota/* /api/settings/*
+		header Cookie *next-auth.session-token*
+	}
+
+	handle @web_bff {
+		reverse_proxy https://{$WEB_HOST} {
+			header_up Host {$WEB_HOST}
+		}
+	}
+
+	handle_path /api/* {
+		reverse_proxy https://{$API_HOST} {
+			header_up Host {$API_HOST}
+		}
+	}
+
+	handle /keycloak/* {
+		reverse_proxy https://{$KEYCLOAK_HOST} {
+			header_up Host {$KEYCLOAK_HOST}
+		}
+	}
+
+	handle_path /temporal/* {
+		reverse_proxy https://{$TEMPORAL_UI_HOST} {
+			header_up Host {$TEMPORAL_UI_HOST}
+		}
+	}
+
+	handle_path /minio/* {
+		reverse_proxy https://{$MINIO_HOST} {
+			header_up Host {$MINIO_HOST}
+		}
+	}
+
+	handle_path /otel/* {
+		reverse_proxy https://{$OTEL_COLLECTOR_HOST} {
+			header_up Host {$OTEL_COLLECTOR_HOST}
+		}
+	}
+
+	handle {
+		reverse_proxy https://{$WEB_HOST} {
+			header_up Host {$WEB_HOST}
+			lb_try_duration 5s
+			lb_try_interval 250ms
+		}
+	}
+}

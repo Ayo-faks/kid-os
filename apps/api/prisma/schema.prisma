@@ -1,0 +1,912 @@
+// CareOS domain model.
+//
+// Phase 0 #4 owns the bootstrap migration (`migrations/0001_init`) which
+// creates the `core`, `audit`, and `vector` schemas, enables the required
+// extensions, enables RLS on every `@@schema("core")` table with the
+// session-GUC-based policy template, and makes `audit.events` append-only.
+//
+// Phase 1 §1 adds `migrations/0002_phase1_audit_triggers` which installs the
+// AFTER INSERT/UPDATE triggers on `incidents`, `incident_versions`, and
+// `timeline_entries` that write into `audit.events`, plus a BEFORE UPDATE OR
+// DELETE trigger on `timeline_entries` enforcing immutability.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  schemas    = ["core", "audit"]
+  extensions = [pgcrypto, pgvector(map: "vector"), pg_trgm]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tenancy
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  homes     Home[]
+  users     User[]
+  residents Resident[]
+  templates FormTemplate[]
+  incidents Incident[]
+  handovers HandoverRecord[]
+  shifts    Shift[]
+  timeline  TimelineEntry[]
+  emailDrafts EmailDraft[]
+  approvals   Approval[]
+  rotaRules        RotaRule[]
+  rotaPublications RotaPublication[]
+  channelMappings  ChannelMapping[]
+  linkCodes        LinkCode[]
+  linkedIdentities LinkedIdentity[]
+  exportBundles    ExportBundle[]
+  retentionPolicies RetentionPolicy[]
+  retentionRuns    RetentionRun[]
+
+  @@map("tenants")
+  @@schema("core")
+}
+
+model Home {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  ofstedUrn String?  @map("ofsted_urn")
+  safeguardingContactName  String? @map("safeguarding_contact_name")
+  safeguardingContactEmail String? @map("safeguarding_contact_email")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  residents Resident[]
+  incidents Incident[]
+  handovers HandoverRecord[]
+  shifts    Shift[]
+  timeline  TimelineEntry[]
+  tasks     Task[]
+  emailDrafts EmailDraft[]
+  approvals   Approval[]
+  rotaRules        RotaRule[]
+  rotaPublications RotaPublication[]
+  channelMappings  ChannelMapping[]
+  linkCodes        LinkCode[]
+  exportBundles    ExportBundle[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("homes")
+  @@schema("core")
+}
+
+// Mirror of Keycloak users — minimal fields needed for attribution and joins.
+// Authentication is owned by Keycloak; this row is upserted from JWT claims.
+model User {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  keycloakSub String   @unique @map("keycloak_sub")
+  email       String
+  displayName String   @map("display_name")
+  homeIds     String[] @map("home_ids") @db.Uuid
+  roles       String[] // support_worker | key_worker | shift_lead | manager | safeguarding_lead | ops_admin
+  qualifications String[] @default([])
+  gender      String?
+  disabled    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  incidentsAuthored Incident[]        @relation("IncidentAuthor")
+  handoversCreated  HandoverRecord[]  @relation("HandoverAuthor")
+  versionsAuthored  IncidentVersion[] @relation("VersionAuthor")
+  timelineEntries   TimelineEntry[]   @relation("TimelineAuthor")
+  tasksAssigned     Task[]            @relation("TaskAssignee")
+  shiftAssignments  ShiftAssignment[]
+  emailDraftsCreated  EmailDraft[]    @relation("EmailDraftAuthor")
+  emailDraftsReviewed EmailDraft[]    @relation("EmailDraftReviewer")
+  approvalsRequested  Approval[]      @relation("ApprovalRequester")
+  approvalsDecided    Approval[]      @relation("ApprovalDecider")
+  rotaPublications    RotaPublication[] @relation("RotaPublisher")
+  linkCodes           LinkCode[]
+  linkedIdentities    LinkedIdentity[]
+  exportBundlesRequested ExportBundle[] @relation("ExportBundleRequester")
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Residents
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Resident {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  homeId       String   @map("home_id") @db.Uuid
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  preferredName String? @map("preferred_name")
+  dateOfBirth  DateTime @map("date_of_birth") @db.Date
+  nhsNumber    String?  @map("nhs_number")
+  arrivedAt    DateTime @map("arrived_at")
+  leftAt       DateTime? @map("left_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home      Home            @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  incidents Incident[]
+  timeline  TimelineEntry[]
+  tasks     Task[]
+
+  @@index([tenantId, homeId])
+  @@map("residents")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Form templates (versioned JSON Schema + UI Schema, seeded from packages/schemas)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model FormTemplate {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  templateId  String   @map("template_id") // e.g. "incident.behavioural"
+  version     String                       // e.g. "v1"
+  title       String
+  schema      Json
+  uiSchema    Json     @map("ui_schema")
+  publishedAt DateTime @default(now()) @map("published_at")
+  retiredAt   DateTime? @map("retired_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  incidents Incident[]
+
+  @@unique([tenantId, templateId, version])
+  @@index([tenantId, templateId])
+  @@map("form_templates")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Incidents — append-only via versions; current state cached on `incidents`
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum IncidentStatus {
+  draft
+  awaiting_fields
+  awaiting_approval
+  approved
+  exported
+  rejected
+
+  @@schema("core")
+}
+
+model Incident {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String          @map("tenant_id") @db.Uuid
+  homeId          String          @map("home_id") @db.Uuid
+  residentId      String          @map("resident_id") @db.Uuid
+  formTemplateId  String          @map("form_template_id") @db.Uuid
+  workflowId      String?         @unique @map("workflow_id") // Temporal workflow id
+  status          IncidentStatus  @default(draft)
+  currentVersion  Int             @default(1) @map("current_version")
+  authorUserId    String          @map("author_user_id") @db.Uuid
+  approvedByUserId String?        @map("approved_by_user_id") @db.Uuid
+  approvedAt      DateTime?       @map("approved_at")
+  exportedAt      DateTime?       @map("exported_at")
+  exportObjectKey String?         @map("export_object_key") // MinIO key
+  missingFieldsReminderSentAt DateTime? @map("missing_fields_reminder_sent_at")
+  softDeletedAt   DateTime?       @map("soft_deleted_at")
+  retentionPolicyId String?       @map("retention_policy_id") @db.Uuid
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home         Home              @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  resident     Resident          @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  formTemplate FormTemplate      @relation(fields: [formTemplateId], references: [id], onDelete: Restrict)
+  author       User              @relation("IncidentAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  versions     IncidentVersion[]
+  attachments  Attachment[]
+  timeline     TimelineEntry[]
+  exportBundles ExportBundle[]
+
+  @@index([tenantId, homeId])
+  @@index([residentId])
+  @@index([status])
+  @@map("incidents")
+  @@schema("core")
+}
+
+model IncidentVersion {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String         @map("tenant_id") @db.Uuid
+  homeId      String         @map("home_id") @db.Uuid
+  incidentId  String         @map("incident_id") @db.Uuid
+  version     Int
+  status      IncidentStatus
+  formData    Json           @map("form_data")
+  missingMandatory String[]  @map("missing_mandatory")
+  validationErrors Json?     @map("validation_errors")
+  // Provenance: which actor produced this version.
+  actorKind      String      @map("actor_kind") // "user" | "agent" | "system"
+  actorUserId    String?     @map("actor_user_id") @db.Uuid
+  agentRunId     String?     @map("agent_run_id")
+  promptHash     String?     @map("prompt_hash")
+  correlationId  String?     @map("correlation_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  actor    User?    @relation("VersionAuthor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@unique([incidentId, version])
+  @@index([tenantId, homeId])
+  @@map("incident_versions")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Resident timeline — append-only join of incidents/notes/tasks/comms.
+// Inserts only; immutable timestamps. Triggers in the bootstrap migration
+// reject UPDATE/DELETE.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum TimelineKind {
+  incident
+  note
+  task
+  comm
+  system
+
+  @@schema("core")
+}
+
+model TimelineEntry {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String       @map("tenant_id") @db.Uuid
+  homeId      String       @map("home_id") @db.Uuid
+  residentId  String       @map("resident_id") @db.Uuid
+  kind        TimelineKind
+  occurredAt  DateTime     @map("occurred_at")
+  summary     String       @db.Text
+  payload     Json?
+  // Source-of-truth pointers (nullable; only one is expected to be set).
+  incidentId  String?      @map("incident_id") @db.Uuid
+  taskId      String?      @map("task_id") @db.Uuid
+  actorKind   String       @map("actor_kind") // "user" | "agent" | "system"
+  actorUserId String?      @map("actor_user_id") @db.Uuid
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home     Home      @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  resident Resident  @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  incident Incident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  task     Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  actor    User?     @relation("TimelineAuthor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, homeId, residentId, occurredAt])
+  @@index([residentId, occurredAt])
+  @@map("timeline_entries")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shifts + handovers (Phase 2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ShiftAssignmentState {
+  tentative
+  confirmed
+  published
+
+  @@schema("core")
+}
+
+enum HandoverStatus {
+  processing
+  completed
+  failed
+
+  @@schema("core")
+}
+
+model Shift {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  homeId       String   @map("home_id") @db.Uuid
+  startsAt     DateTime @map("starts_at")
+  endsAt       DateTime @map("ends_at")
+  requiredRole String   @map("required_role")
+  minHeadcount Int      @default(1) @map("min_headcount")
+  notes        String?  @db.Text
+  reminderSentAt DateTime? @map("reminder_sent_at")
+  handoverDueReminderSentAt DateTime? @map("handover_due_reminder_sent_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home        Home              @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  assignments ShiftAssignment[]
+  handovers   HandoverRecord[]
+
+  @@index([tenantId, homeId, startsAt])
+  @@map("shifts")
+  @@schema("core")
+}
+
+model ShiftAssignment {
+  id        String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String               @map("tenant_id") @db.Uuid
+  homeId    String               @map("home_id") @db.Uuid
+  shiftId   String               @map("shift_id") @db.Uuid
+  userId    String               @map("user_id") @db.Uuid
+  state     ShiftAssignmentState @default(tentative)
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, userId])
+  @@index([tenantId, homeId, shiftId])
+  @@map("shift_assignments")
+  @@schema("core")
+}
+
+model HandoverRecord {
+  id                  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String         @map("tenant_id") @db.Uuid
+  homeId              String         @map("home_id") @db.Uuid
+  shiftId             String         @map("shift_id") @db.Uuid
+  workflowId          String?        @unique @map("workflow_id")
+  status              HandoverStatus @default(processing)
+  sourceText          String         @map("source_text") @db.Text
+  transcriptObjectKey String?        @map("transcript_object_key")
+  structuredPayload   Json           @map("structured_payload")
+  summary             String         @db.Text
+  createdByUserId     String         @map("created_by_user_id") @db.Uuid
+  softDeletedAt       DateTime?      @map("soft_deleted_at")
+  retentionPolicyId   String?        @map("retention_policy_id") @db.Uuid
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home      Home           @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  shift     Shift          @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+  createdBy User           @relation("HandoverAuthor", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  tasks     HandoverTask[]
+
+  @@index([tenantId, homeId, createdAt])
+  @@index([shiftId])
+  @@map("handover_records")
+  @@schema("core")
+}
+
+model HandoverTask {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  homeId           String   @map("home_id") @db.Uuid
+  handoverRecordId String   @map("handover_record_id") @db.Uuid
+  taskId           String   @map("task_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  handover HandoverRecord @relation(fields: [handoverRecordId], references: [id], onDelete: Cascade)
+  task     Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([handoverRecordId, taskId])
+  @@unique([taskId])
+  @@index([tenantId, homeId])
+  @@map("handover_tasks")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Attachments (MinIO-backed)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Attachment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  homeId      String   @map("home_id") @db.Uuid
+  incidentId  String?  @map("incident_id") @db.Uuid
+  objectKey   String   @map("object_key")
+  contentType String   @map("content_type")
+  sizeBytes   Int      @map("size_bytes")
+  sha256      String
+  uploadedByUserId String? @map("uploaded_by_user_id") @db.Uuid
+  softDeletedAt    DateTime? @map("soft_deleted_at")
+  objectDeletedAt  DateTime? @map("object_deleted_at")
+  retentionPolicyId String? @map("retention_policy_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  incident Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, homeId])
+  @@map("attachments")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tasks (referenced from timeline + handover; full surface lands in Phase 2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum TaskStatus {
+  open
+  in_progress
+  done
+  cancelled
+
+  @@schema("core")
+}
+
+model Task {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String     @map("tenant_id") @db.Uuid
+  homeId          String     @map("home_id") @db.Uuid
+  residentId      String?    @map("resident_id") @db.Uuid
+  title           String
+  detail          String?    @db.Text
+  status          TaskStatus @default(open)
+  dueAt           DateTime?  @map("due_at")
+  assignedUserId  String?    @map("assigned_user_id") @db.Uuid
+  createdByUserId String?    @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  home     Home            @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  resident Resident?       @relation(fields: [residentId], references: [id], onDelete: SetNull)
+  assignee User?           @relation("TaskAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  handoverLinks HandoverTask[]
+  timeline TimelineEntry[]
+
+  @@index([tenantId, homeId, status])
+  @@map("tasks")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Idempotency + outbox
+// ─────────────────────────────────────────────────────────────────────────────
+
+model IdempotencyKey {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  key            String
+  method         String
+  path           String
+  requestHash    String   @map("request_hash")
+  responseStatus Int      @map("response_status")
+  responseBody   Json     @map("response_body")
+  workflowId     String?  @map("workflow_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  expiresAt      DateTime @map("expires_at")
+
+  @@unique([tenantId, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+  @@schema("core")
+}
+
+model Outbox {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  homeId      String?   @map("home_id") @db.Uuid
+  topic       String
+  payload     Json
+  status      String    @default("pending") // pending | sent | failed
+  attempts    Int       @default(0)
+  lastError   String?   @map("last_error")
+  availableAt DateTime  @default(now()) @map("available_at")
+  sentAt      DateTime? @map("sent_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([status, availableAt])
+  @@map("outbox")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Audit (append-only) — sits in its own schema. The bootstrap migration must
+// REVOKE UPDATE, DELETE on this table and install a trigger that raises on
+// either operation. Do NOT mutate rows via Prisma.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  homeId         String?  @map("home_id") @db.Uuid
+  occurredAt     DateTime @default(now()) @map("occurred_at")
+  actorKind      String   @map("actor_kind") // "user" | "agent" | "system"
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  agentRunId     String?  @map("agent_run_id")
+  promptHash     String?  @map("prompt_hash")
+  correlationId  String?  @map("correlation_id")
+  action         String   // e.g. "incident.draft_created", "incident.approved"
+  subjectType    String   @map("subject_type") // e.g. "incident", "incident_version"
+  subjectId      String   @map("subject_id") @db.Uuid
+  diff           Json?    // before/after snippet (optional)
+  metadata       Json?
+
+  @@index([tenantId, homeId, occurredAt])
+  @@index([subjectType, subjectId])
+  @@index([correlationId])
+  @@map("events")
+  @@schema("audit")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Email drafts + role-aware approvals (Phase 2/3/4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum EmailDraftStatus {
+  draft
+  needs_review
+  approved
+  rejected
+  sent_stub
+
+  @@schema("core")
+}
+
+enum EmailSensitivity {
+  routine
+  sensitive
+
+  @@schema("core")
+}
+
+enum EmailSourceKind {
+  incident
+  handover
+  general
+
+  @@schema("core")
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+
+  @@schema("core")
+}
+
+model Approval {
+  id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String         @map("tenant_id") @db.Uuid
+  homeId             String         @map("home_id") @db.Uuid
+  workflowId         String?        @unique @map("workflow_id")
+  subjectType        String         @map("subject_type")
+  subjectId          String         @map("subject_id") @db.Uuid
+  title              String
+  summary            String         @db.Text
+  status             ApprovalStatus @default(pending)
+  requestedByUserId  String         @map("requested_by_user_id") @db.Uuid
+  decidedByUserId    String?        @map("decided_by_user_id") @db.Uuid
+  decisionReason     String?        @map("decision_reason") @db.Text
+  decidedAt          DateTime?      @map("decided_at")
+  signaturesRequired Int            @default(1) @map("signatures_required")
+  requiredRoles      String[]       @default(["manager"]) @map("required_roles")
+  signatures         Json           @default("[]") @db.JsonB
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home        Home   @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  requestedBy User   @relation("ApprovalRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  decidedBy   User?  @relation("ApprovalDecider", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, homeId, subjectType, subjectId])
+  @@index([tenantId, homeId, status, createdAt])
+  @@index([subjectType, subjectId])
+  @@map("approvals")
+  @@schema("core")
+}
+
+model EmailDraft {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String           @map("tenant_id") @db.Uuid
+  homeId             String           @map("home_id") @db.Uuid
+  workflowId         String?          @unique @map("workflow_id")
+  sourceKind         EmailSourceKind  @map("source_kind")
+  sourceId           String?          @map("source_id") @db.Uuid
+  sourceSummary      String           @map("source_summary") @db.Text
+  recipientName      String?          @map("recipient_name")
+  recipientEmail     String           @map("recipient_email")
+  recipientRole      String?          @map("recipient_role")
+  subject            String
+  body               String           @db.Text
+  sensitivity        EmailSensitivity @default(routine)
+  sensitivityReasons Json             @default("[]") @map("sensitivity_reasons")
+  status             EmailDraftStatus @default(draft)
+  promptHash         String?          @map("prompt_hash")
+  createdByUserId    String           @map("created_by_user_id") @db.Uuid
+  reviewedByUserId   String?          @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt         DateTime?        @map("reviewed_at")
+  softDeletedAt      DateTime?        @map("soft_deleted_at")
+  retentionPolicyId  String?          @map("retention_policy_id") @db.Uuid
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home       Home   @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  createdBy  User   @relation("EmailDraftAuthor", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  reviewedBy User?  @relation("EmailDraftReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, homeId, createdAt])
+  @@index([status])
+  @@index([sourceKind, sourceId])
+  @@map("email_drafts")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rota (Phase 2 §4) — deterministic analysis plus explicit publication.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum RotaRuleKind {
+  min_staffing
+  gender_mix
+  qualification_flag
+
+  @@schema("core")
+}
+
+enum RotaPublicationStatus {
+  published
+  failed
+
+  @@schema("core")
+}
+
+model RotaRule {
+  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String       @map("tenant_id") @db.Uuid
+  homeId     String       @map("home_id") @db.Uuid
+  name       String
+  kind       RotaRuleKind
+  parameters Json
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home   Home   @relation(fields: [homeId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, homeId])
+  @@index([kind])
+  @@map("rota_rules")
+  @@schema("core")
+}
+
+model RotaPublication {
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String                @map("tenant_id") @db.Uuid
+  homeId            String                @map("home_id") @db.Uuid
+  workflowId        String                @unique @map("workflow_id")
+  status            RotaPublicationStatus @default(published)
+  periodStart       DateTime              @map("period_start")
+  periodEnd         DateTime              @map("period_end")
+  shiftIds          String[]              @map("shift_ids") @db.Uuid
+  assignmentIds     String[]              @map("assignment_ids") @db.Uuid
+  publishedByUserId String                @map("published_by_user_id") @db.Uuid
+  note              String?               @db.Text
+  createdAt         DateTime              @default(now()) @map("created_at")
+
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home        Home   @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  publishedBy User   @relation("RotaPublisher", fields: [publishedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, homeId, createdAt])
+  @@map("rota_publications")
+  @@schema("core")
+}
+
+enum ChannelKind {
+  home
+  safeguarding
+  rota
+  general
+
+  @@schema("core")
+}
+
+model ChannelMapping {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String      @map("tenant_id") @db.Uuid
+  homeId      String      @map("home_id") @db.Uuid
+  kind        ChannelKind
+  channelId   String      @map("channel_id")
+  channelName String      @map("channel_name")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home   Home   @relation(fields: [homeId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, homeId, kind])
+  @@unique([tenantId, channelId])
+  @@map("channel_mappings")
+  @@schema("core")
+}
+
+model LinkCode {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  homeId             String    @map("home_id") @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  code               String    @unique
+  expiresAt          DateTime  @map("expires_at")
+  usedAt             DateTime? @map("used_at")
+  mattermostUserId   String?   @map("mattermost_user_id")
+  mattermostUsername String?   @map("mattermost_username")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home   Home   @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, homeId, userId])
+  @@index([expiresAt])
+  @@map("link_codes")
+  @@schema("core")
+}
+
+model LinkedIdentity {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  mattermostUserId   String    @map("mattermost_user_id")
+  mattermostUsername String    @map("mattermost_username")
+  linkedAt           DateTime  @default(now()) @map("linked_at")
+  revokedAt          DateTime? @map("revoked_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("linked_identities")
+  @@schema("core")
+}
+
+enum DocumentStatus {
+  uploaded
+  extracting
+  extracted
+  failed
+
+  @@schema("core")
+}
+
+model Document {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String         @map("tenant_id") @db.Uuid
+  homeId           String         @map("home_id") @db.Uuid
+  uploaderUserId   String         @map("uploader_user_id") @db.Uuid
+  workflowId       String?        @unique @map("workflow_id")
+  objectKey        String         @map("object_key")
+  originalFilename String         @map("original_filename")
+  mimeType         String         @map("mime_type")
+  sizeBytes        Int            @map("size_bytes")
+  status           DocumentStatus @default(uploaded)
+  extractedText    String?        @map("extracted_text")
+  failureReason    String?        @map("failure_reason")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@index([tenantId, homeId, status])
+  @@index([tenantId, homeId, createdAt])
+  @@map("documents")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 4 §2 — Serious incident export bundles
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ExportBundleStatus {
+  pending
+  building
+  ready
+  failed
+
+  @@schema("core")
+}
+
+model ExportBundle {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String             @map("tenant_id") @db.Uuid
+  homeId             String             @map("home_id") @db.Uuid
+  incidentId         String             @map("incident_id") @db.Uuid
+  requestedByUserId  String             @map("requested_by_user_id") @db.Uuid
+  workflowId         String?            @unique @map("workflow_id")
+  status             ExportBundleStatus @default(pending)
+  objectKey          String?            @map("object_key")
+  manifestSha256     String?            @map("manifest_sha256")
+  signature          String?
+  signatureAlgorithm String?            @map("signature_algorithm")
+  sizeBytes          Int?               @map("size_bytes")
+  retainUntil        DateTime?          @map("retain_until")
+  failureReason      String?            @map("failure_reason")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  home     Home     @relation(fields: [homeId], references: [id], onDelete: Restrict)
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Restrict)
+  requestedBy User  @relation("ExportBundleRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, homeId, status])
+  @@index([incidentId])
+  @@map("export_bundles")
+  @@schema("core")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 4 §3 — Retention policies and runs
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum RetentionRecordType {
+  incident
+  handover_record
+  email_draft
+  attachment
+
+  @@schema("core")
+}
+
+enum RetentionAction {
+  soft_delete
+  object_delete
+
+  @@schema("core")
+}
+
+model RetentionPolicy {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String              @map("tenant_id") @db.Uuid
+  recordType    RetentionRecordType @map("record_type")
+  retentionDays Int                 @map("retention_days")
+  action        RetentionAction
+  enabled       Boolean             @default(true)
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  runs   RetentionRun[]
+
+  @@unique([tenantId, recordType])
+  @@map("retention_policies")
+  @@schema("core")
+}
+
+model RetentionRun {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String              @map("tenant_id") @db.Uuid
+  policyId       String              @map("policy_id") @db.Uuid
+  workflowId     String              @map("workflow_id")
+  recordType     RetentionRecordType @map("record_type")
+  action         RetentionAction
+  scannedCount   Int                 @default(0) @map("scanned_count")
+  affectedCount  Int                 @default(0) @map("affected_count")
+  startedAt      DateTime            @default(now()) @map("started_at")
+  completedAt    DateTime?           @map("completed_at")
+  failureReason  String?             @map("failure_reason")
+
+  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  policy RetentionPolicy @relation(fields: [policyId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, startedAt])
+  @@map("retention_runs")
+  @@schema("core")
+}

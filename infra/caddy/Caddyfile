@@ -1,0 +1,85 @@
+{
+	admin off
+	auto_https disable_redirects
+	skip_install_trust
+}
+
+:80 {
+	handle /health {
+		respond "ok" 200
+	}
+
+	handle {
+		redir https://{host}{uri} permanent
+	}
+}
+
+https://localhost, https://{$PUBLIC_HOSTNAME:localhost} {
+	tls internal
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	handle /health {
+		reverse_proxy api:3000
+	}
+
+	handle /ready {
+		reverse_proxy api:3000
+	}
+
+	handle /api/auth/* {
+		reverse_proxy web:3001
+	}
+
+	@web_bff {
+		path /api/approvals* /api/assistant/* /api/automations/* /api/comms/* /api/documents* /api/export-bundles* /api/handovers* /api/incidents* /api/reports* /api/retention/* /api/rota/* /api/settings/*
+		header Cookie *next-auth.session-token*
+	}
+
+	handle @web_bff {
+		reverse_proxy web:3001
+	}
+
+	handle_path /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle /keycloak/* {
+		reverse_proxy keycloak:8080
+	}
+
+	handle /grafana/* {
+		reverse_proxy grafana:3000
+	}
+
+	handle_path /temporal/* {
+		reverse_proxy temporal-ui:8080
+	}
+
+	handle_path /minio/* {
+		reverse_proxy minio:9000 {
+			header_up Host minio:9000
+		}
+	}
+
+	handle_path /minio-console/* {
+		reverse_proxy minio:9001
+	}
+
+	handle_path /otel/* {
+		reverse_proxy otel-collector:4318
+	}
+
+	handle {
+		reverse_proxy web:3001 {
+			lb_try_duration 5s
+			lb_try_interval 250ms
+		}
+	}
+}

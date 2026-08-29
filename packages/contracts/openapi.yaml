@@ -1,0 +1,1109 @@
+openapi: 3.1.0
+paths:
+  /health:
+    get:
+      operationId: HealthController_health
+      parameters: []
+      responses:
+        "200":
+          description: Liveness probe.
+      tags: &a1
+        - health
+  /ready:
+    get:
+      operationId: HealthController_ready
+      parameters: []
+      responses:
+        "200":
+          description: Readiness probe. Fails until every shipped migration is applied.
+      tags: *a1
+  /mcp:
+    get:
+      operationId: McpController_tools
+      parameters: []
+      responses:
+        "200":
+          description: Phase 0 MCP capability advertisement.
+      tags: &a2
+        - mcp
+    post:
+      operationId: McpController_handle
+      parameters: []
+      responses:
+        "200":
+          description: Phase 0 MCP JSON-RPC stub.
+      tags: *a2
+  /mcp/tools/list-form-templates:
+    get:
+      operationId: McpController_listFormTemplates
+      parameters: []
+      responses:
+        "200":
+          description: Catalogue of schema-driven form templates.
+      tags: *a2
+  /mcp/tools/get-form-template:
+    get:
+      operationId: McpController_getFormTemplate
+      parameters: []
+      responses:
+        "200":
+          description: JSON Schema and UI Schema for a form template.
+      tags: *a2
+  /observability/trace:
+    get:
+      operationId: ObservabilityController_traceProbe
+      parameters: []
+      responses:
+        "200":
+          description: Emits a Phase 0 trace probe span.
+      tags:
+        - observability
+  /temporal/ping:
+    post:
+      operationId: TemporalController_startPing
+      parameters: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              properties:
+                message:
+                  type: string
+              type: object
+      responses:
+        "202":
+          description: Starts the Phase 0 PingWorkflow smoke run.
+      tags:
+        - temporal
+  /incidents/draft-from-text:
+    post:
+      operationId: IncidentsController_draftFromText
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DraftIncidentFromTextDto"
+      responses:
+        "200":
+          description: Returns a schema-gated incident draft for staff review.
+      tags: &a3
+        - incidents
+  /incidents:
+    post:
+      operationId: IncidentsController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIncidentDto"
+      responses:
+        "202":
+          description: Starts an IncidentReportWorkflow.
+      tags: *a3
+    get:
+      operationId: IncidentsController_list
+      parameters: []
+      responses:
+        "200":
+          description: Lists active incidents for the current home.
+      tags: *a3
+  /incidents/{id}:
+    patch:
+      operationId: IncidentsController_update
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIncidentDto"
+      responses:
+        "202":
+          description: ""
+      tags: *a3
+    get:
+      operationId: IncidentsController_findOne
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Incident with versions and timeline.
+      tags: *a3
+  /incidents/{id}/submit:
+    post:
+      operationId: IncidentsController_submit
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitIncidentDto"
+      responses:
+        "202":
+          description: ""
+      tags: *a3
+  /incidents/{id}/approve:
+    post:
+      operationId: IncidentsController_approve
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveIncidentDto"
+      responses:
+        "202":
+          description: ""
+      tags: *a3
+  /incidents/{id}/export:
+    post:
+      operationId: IncidentsController_export
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportIncidentDto"
+      responses:
+        "202":
+          description: ""
+      tags: *a3
+  /incidents/{id}/download:
+    get:
+      operationId: IncidentsController_download
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Presigned MinIO URL for the exported PDF.
+      tags: *a3
+  /residents/{id}/timeline:
+    get:
+      operationId: IncidentsController_residentTimeline
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a3
+  /approvals:
+    get:
+      operationId: ApprovalsController_list
+      parameters: []
+      responses:
+        "200":
+          description: Pending approval queue for the active home.
+      tags: &a4
+        - approvals
+  /approvals/{id}/approve:
+    post:
+      operationId: ApprovalsController_approve
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalDecisionDto"
+      responses:
+        "202":
+          description: Signals the approval workflow to approve.
+      tags: *a4
+  /approvals/{id}/reject:
+    post:
+      operationId: ApprovalsController_reject
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalDecisionDto"
+      responses:
+        "202":
+          description: Signals the approval workflow to reject.
+      tags: *a4
+  /handovers:
+    post:
+      operationId: HandoversController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHandoverDto"
+      responses:
+        "202":
+          description: Starts a HandoverWorkflow.
+      tags:
+        - handovers
+  /comms/email/draft:
+    post:
+      operationId: EmailDraftsController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmailDraftDto"
+      responses:
+        "202":
+          description: Starts an EmailDraftWorkflow.
+      tags:
+        - email-drafts
+  /assistant/quick-actions:
+    get:
+      operationId: AssistantController_quickActions
+      parameters: []
+      responses:
+        "200":
+          description: Static list of supported quick-actions.
+      tags: &a5
+        - assistant
+  /assistant/messages:
+    post:
+      operationId: AssistantController_messages
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistantMessageDto"
+      responses:
+        "200":
+          description: ""
+      tags: *a5
+  /residents:
+    get:
+      operationId: ResidentsController_list
+      parameters: []
+      responses:
+        "200":
+          description: List residents in scope of the active home.
+      tags: &a6
+        - residents
+  /residents/{id}:
+    get:
+      operationId: ResidentsController_findOne
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resident detail.
+      tags: *a6
+  /rota:
+    get:
+      operationId: RotaController_overview
+      parameters: []
+      responses:
+        "200":
+          description: List shifts (with assignments) and rota rules for a date range.
+      tags: &a7
+        - rota
+  /rota/analyze:
+    post:
+      operationId: RotaController_analyze
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeRotaDto"
+      responses:
+        "200":
+          description: Synchronously evaluates rota rules and returns gaps + proposals.
+      tags: *a7
+  /rota/publish:
+    post:
+      operationId: RotaController_publish
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishRotaDto"
+      responses:
+        "202":
+          description: Starts a RotaPublishWorkflow.
+      tags: *a7
+  /rota/rules:
+    post:
+      operationId: RotaController_createRule
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRotaRuleDto"
+      responses:
+        "200":
+          description: Creates a new rota rule scoped to the active home.
+      tags: *a7
+  /comms/mattermost/link-codes:
+    post:
+      operationId: MattermostController_issue
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueLinkCodeDto"
+      responses:
+        "201":
+          description: Issues a one-time /link code.
+      tags: &a8
+        - comms.mattermost
+  /comms/mattermost/link-codes/exchange:
+    post:
+      operationId: MattermostController_exchange
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExchangeLinkCodeDto"
+      responses:
+        "200":
+          description: Exchanges a /link code for a linked identity.
+      tags: *a8
+  /comms/mattermost/channels:
+    get:
+      operationId: MattermostController_listChannels
+      parameters: []
+      responses:
+        "200":
+          description: Lists Mattermost channel mappings for the active home.
+      tags: *a8
+    post:
+      operationId: MattermostController_upsertChannel
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertChannelMappingDto"
+      responses:
+        "201":
+          description: Upserts a Mattermost channel mapping by kind.
+      tags: *a8
+  /automations/recent:
+    get:
+      operationId: AutomationsController_listRecent
+      parameters:
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            exclusiveMaximum: false
+            exclusiveMinimum: false
+            default: 20
+            type: integer
+      responses:
+        "200":
+          description: Recent scheduled-automation audit events for the active home.
+      tags:
+        - automations
+  /documents/presign:
+    post:
+      operationId: DocumentsController_presign
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresignDocumentDto"
+      responses:
+        "200":
+          description: Returns a scoped short-lived document upload URL.
+      tags: &a9
+        - documents
+  /documents:
+    post:
+      operationId: DocumentsController_register
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDocumentDto"
+      responses:
+        "202":
+          description: Registers a document and starts ingestion.
+      tags: *a9
+    get:
+      operationId: DocumentsController_list
+      parameters: []
+      responses:
+        "200":
+          description: Lists the latest documents for the active home.
+      tags: *a9
+  /documents/{id}:
+    get:
+      operationId: DocumentsController_findById
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns a document record by id.
+      tags: *a9
+  /export-bundles:
+    post:
+      operationId: ExportBundlesController_request
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestExportBundleDto"
+      responses:
+        "202":
+          description: Requests a serious incident export bundle.
+      tags: &a10
+        - export-bundles
+  /export-bundles/{id}:
+    get:
+      operationId: ExportBundlesController_findById
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns an export bundle record by id.
+      tags: *a10
+  /export-bundles/{id}/download:
+    get:
+      operationId: ExportBundlesController_download
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns a short-lived presigned download URL for a ready bundle.
+      tags: *a10
+  /reports/incidents/by-type:
+    get:
+      operationId: ReportsController_byType
+      parameters:
+        - name: from
+          required: false
+          in: query
+          schema:
+            format: date-time
+            type: string
+        - name: to
+          required: false
+          in: query
+          schema:
+            format: date-time
+            type: string
+      responses:
+        "200":
+          description: Incidents grouped by `incident_type`.
+      tags: &a11
+        - reports
+  /reports/incidents/by-home:
+    get:
+      operationId: ReportsController_byHome
+      parameters:
+        - name: from
+          required: false
+          in: query
+          schema:
+            format: date-time
+            type: string
+        - name: to
+          required: false
+          in: query
+          schema:
+            format: date-time
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a11
+  /reports/incidents/by-month:
+    get:
+      operationId: ReportsController_byMonth
+      parameters:
+        - name: from
+          required: false
+          in: query
+          schema:
+            format: date-time
+            type: string
+        - name: to
+          required: false
+          in: query
+          schema:
+            format: date-time
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a11
+  /reports/incidents/export.csv:
+    get:
+      operationId: ReportsController_exportCsv
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a11
+  /settings/safeguarding-contact:
+    get:
+      operationId: HomeSettingsController_get
+      parameters: []
+      responses:
+        "200":
+          description: Returns the configured safeguarding contact for this home.
+      tags: &a12
+        - home-settings
+    put:
+      operationId: HomeSettingsController_update
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSafeguardingContactDto"
+      responses:
+        "200":
+          description: Updates or clears the safeguarding contact for this home.
+      tags: *a12
+  /retention/policies:
+    get:
+      operationId: RetentionController_list
+      parameters: []
+      responses:
+        "200":
+          description: Lists retention policies for the active tenant.
+      tags: &a13
+        - retention
+    put:
+      operationId: RetentionController_upsert
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertRetentionPolicyDto"
+      responses:
+        "200":
+          description: ""
+      tags: *a13
+  /retention/runs:
+    get:
+      operationId: RetentionController_listRuns
+      parameters: []
+      responses:
+        "200":
+          description: Lists recent retention sweep runs for the active tenant.
+      tags: *a13
+  /retention/sweep:
+    post:
+      operationId: RetentionController_sweep
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TriggerRetentionSweepDto"
+      responses:
+        "202":
+          description: Starts a manual retention sweep.
+      tags: *a13
+info:
+  title: CareOS API
+  description: Phase 0 CareOS API skeleton.
+  version: 0.0.0
+  contact: {}
+tags: []
+servers: []
+components:
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+  schemas:
+    DraftIncidentFromTextDto:
+      type: object
+      properties:
+        free_text:
+          type: string
+          minLength: 1
+          maxLength: 8000
+        resident_id:
+          type: string
+          format: uuid
+        template_id:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+        - free_text
+        - resident_id
+        - template_id
+    CreateIncidentDto:
+      type: object
+      properties:
+        residentId:
+          type: string
+          format: uuid
+        formTemplate:
+          type: object
+          properties:
+            templateId:
+              type: string
+              minLength: 1
+              maxLength: 200
+            version:
+              type: string
+              minLength: 1
+              maxLength: 50
+          required:
+            - templateId
+            - version
+          x-nestjs_zod-self-required: true
+        initialFormData:
+          type: object
+          additionalProperties: {}
+          x-nestjs_zod-self-required: false
+      required:
+        - residentId
+        - formTemplate
+    UpdateIncidentDto:
+      type: object
+      properties:
+        formData:
+          type: object
+          additionalProperties: {}
+          x-nestjs_zod-self-required: true
+      required:
+        - formData
+    SubmitIncidentDto:
+      type: object
+      properties:
+        root:
+          type: object
+          properties: {}
+          x-nestjs_zod-unwrap-root: true
+          x-nestjs_zod-self-required: false
+    ApproveIncidentDto:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 1000
+    ExportIncidentDto:
+      type: object
+      properties:
+        root:
+          type: object
+          properties: {}
+          x-nestjs_zod-unwrap-root: true
+          x-nestjs_zod-self-required: false
+    ApprovalDecisionDto:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    CreateHandoverDto:
+      type: object
+      properties:
+        free_text:
+          type: string
+          minLength: 10
+          maxLength: 8000
+        shift_id:
+          type: string
+          format: uuid
+        transcript_object_key:
+          type: string
+          minLength: 1
+          maxLength: 1024
+      required:
+        - free_text
+        - shift_id
+    CreateEmailDraftDto:
+      type: object
+      properties:
+        source:
+          type: object
+          properties:
+            kind:
+              type: string
+              enum:
+                - incident
+                - handover
+                - general
+            id:
+              type: string
+              format: uuid
+            summary:
+              type: string
+              minLength: 10
+              maxLength: 4000
+          required:
+            - kind
+            - summary
+          x-nestjs_zod-self-required: true
+        recipient:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+              maxLength: 200
+            email:
+              type: string
+              format: email
+              minLength: 3
+              maxLength: 320
+            role:
+              type: string
+              minLength: 1
+              maxLength: 80
+          required:
+            - email
+          x-nestjs_zod-self-required: true
+        instructions:
+          type: string
+          minLength: 10
+          maxLength: 4000
+      required:
+        - source
+        - recipient
+        - instructions
+    AssistantMessageDto:
+      type: object
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        quickActionId:
+          type: string
+          enum:
+            - create_incident
+            - notify_safeguarding
+            - update_behaviour_log
+        residentId:
+          type: string
+          format: uuid
+      required:
+        - message
+    AnalyzeRotaDto:
+      type: object
+      properties:
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+      required:
+        - period_start
+        - period_end
+    PublishRotaDto:
+      type: object
+      properties:
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+        shift_ids:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+        - period_start
+        - period_end
+        - shift_ids
+    CreateRotaRuleDto:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        kind:
+          type: string
+          enum:
+            - min_staffing
+            - gender_mix
+            - qualification_flag
+        parameters:
+          type: object
+          additionalProperties: {}
+          x-nestjs_zod-self-required: true
+        active:
+          type: boolean
+      required:
+        - name
+        - kind
+        - parameters
+    IssueLinkCodeDto:
+      type: object
+      properties:
+        mattermostHint:
+          type: string
+          minLength: 1
+          maxLength: 120
+    ExchangeLinkCodeDto:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 8
+          maxLength: 64
+        tenantId:
+          type: string
+          format: uuid
+        homeId:
+          type: string
+          format: uuid
+        mattermostUserId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        mattermostUsername:
+          type: string
+          minLength: 1
+          maxLength: 120
+      required:
+        - code
+        - tenantId
+        - homeId
+        - mattermostUserId
+        - mattermostUsername
+    UpsertChannelMappingDto:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+            - home
+            - safeguarding
+            - rota
+            - general
+        channelId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        channelName:
+          type: string
+          minLength: 1
+          maxLength: 120
+      required:
+        - kind
+        - channelId
+        - channelName
+    PresignDocumentDto:
+      type: object
+      properties:
+        original_filename:
+          type: string
+          minLength: 1
+          maxLength: 512
+        mime_type:
+          type: string
+          enum:
+            - application/pdf
+            - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+            - image/jpeg
+            - image/png
+            - text/markdown
+            - text/plain
+        size_bytes:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 26214400
+          exclusiveMaximum: false
+      required:
+        - original_filename
+        - mime_type
+        - size_bytes
+    RegisterDocumentDto:
+      type: object
+      properties:
+        original_filename:
+          type: string
+          minLength: 1
+          maxLength: 512
+        mime_type:
+          type: string
+          enum:
+            - application/pdf
+            - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+            - image/jpeg
+            - image/png
+            - text/markdown
+            - text/plain
+        size_bytes:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 26214400
+          exclusiveMaximum: false
+        object_key:
+          type: string
+          minLength: 1
+          maxLength: 1024
+      required:
+        - original_filename
+        - mime_type
+        - size_bytes
+        - object_key
+    RequestExportBundleDto:
+      type: object
+      properties:
+        incident_id:
+          type: string
+          format: uuid
+      required:
+        - incident_id
+    UpdateSafeguardingContactDto:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+          nullable: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          nullable: true
+      required:
+        - email
+        - name
+    UpsertRetentionPolicyDto:
+      type: object
+      properties:
+        record_type:
+          type: string
+          enum:
+            - incident
+            - handover_record
+            - email_draft
+            - attachment
+        retention_days:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: false
+          maximum: 36500
+          exclusiveMaximum: false
+        action:
+          type: string
+          enum:
+            - soft_delete
+            - object_delete
+        enabled:
+          type: boolean
+      required:
+        - record_type
+        - retention_days
+        - action
+    TriggerRetentionSweepDto:
+      type: object
+      properties:
+        correlationId:
+          type: string
+          minLength: 1
+          maxLength: 128

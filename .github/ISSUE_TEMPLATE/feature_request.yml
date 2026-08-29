@@ -1,0 +1,57 @@
+name: Feature request
+description: Propose a scoped change to Kid-OS behavior or developer experience.
+title: 'feat: '
+labels:
+  - enhancement
+body:
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data-safety confirmation
+      options:
+        - label: This proposal contains no real child, resident, staff, home, incident, credential, log, trace, or database data.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the user or operator problem without prescribing an implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable behavior and acceptance criteria.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: boundaries
+    attributes:
+      label: Sensitive boundaries affected
+      multiple: true
+      options:
+        - Authentication or authorization
+        - Tenant or home isolation
+        - Audit events or retention
+        - Workflow state or approvals
+        - LLM gateway or agent behavior
+        - Infrastructure or deployment
+        - Accessibility
+        - None of these
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and migration
+      description: Note any effect on APIs, headers, environment variables, schemas, queues, stored data, or downstream deployments.

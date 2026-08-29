@@ -1,0 +1,1 @@
+"""Hermes skill packages shipped with the CareOS agent image."""

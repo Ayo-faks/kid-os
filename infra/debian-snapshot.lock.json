@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "20260811T000000Z",
+  "transport": {
+    "scheme": "http",
+    "integrity": "apt-inrelease-signature",
+    "signedBy": "/usr/share/keyrings/debian-archive-keyring.gpg",
+    "reason": "The pinned slim base bootstraps ca-certificates from signed snapshot metadata."
+  },
+  "sources": [
+    {
+      "archive": "debian",
+      "suites": ["bookworm", "bookworm-updates"]
+    },
+    {
+      "archive": "debian-security",
+      "suites": ["bookworm-security"]
+    }
+  ],
+  "usedBy": [
+    "apps/api/Dockerfile",
+    "apps/llm-gateway/Dockerfile",
+    "apps/web/Dockerfile",
+    "apps/worker/Dockerfile",
+    "infra/validation/Dockerfile"
+  ]
+}

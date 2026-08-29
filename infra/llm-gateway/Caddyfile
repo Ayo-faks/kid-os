@@ -1,0 +1,25 @@
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	encode zstd gzip
+
+	handle /health {
+		respond "ok" 200
+	}
+
+	@foundry header X-CareOS-Model-Provider foundry
+	reverse_proxy @foundry {$AZURE_AI_INFERENCE_ENDPOINT:https://example.services.ai.azure.com} {
+		header_up Host {http.reverse_proxy.upstream.hostport}
+		header_up api-key {$AZURE_AI_INFERENCE_KEY:change-me}
+		header_up X-CareOS-Gateway llm-gateway
+	}
+
+	reverse_proxy {$AZURE_OPENAI_ENDPOINT:https://example.openai.azure.com} {
+		header_up Host {http.reverse_proxy.upstream.hostport}
+		header_up api-key {$AZURE_OPENAI_API_KEY:change-me}
+		header_up X-CareOS-Gateway llm-gateway
+	}
+}

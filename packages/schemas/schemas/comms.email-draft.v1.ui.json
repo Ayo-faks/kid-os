@@ -1,0 +1,16 @@
+{
+  "$id": "https://careos.local/schemas/comms.email-draft.v1.ui.json",
+  "order": ["subject", "sensitivity", "sensitivity_reasons", "recipient", "body"],
+  "widgets": {
+    "subject": { "widget": "text" },
+    "body": { "widget": "textarea", "rows": 10 },
+    "sensitivity": { "widget": "select" },
+    "sensitivity_reasons": { "widget": "tag-input" }
+  },
+  "sections": [
+    { "title": "Subject", "fields": ["subject"] },
+    { "title": "Sensitivity", "fields": ["sensitivity", "sensitivity_reasons"] },
+    { "title": "Recipient", "fields": ["recipient"] },
+    { "title": "Body", "fields": ["body"] }
+  ]
+}

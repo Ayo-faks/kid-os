@@ -1,0 +1,48 @@
+{
+  "$id": "https://careos.local/schemas/comms.email-draft.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Email Draft",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["subject", "body", "sensitivity", "recipient"],
+  "properties": {
+    "subject": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 200,
+      "x-mandatory": true
+    },
+    "body": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 8000,
+      "x-mandatory": true
+    },
+    "sensitivity": {
+      "type": "string",
+      "enum": ["routine", "sensitive"],
+      "x-mandatory": true
+    },
+    "sensitivity_reasons": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 3, "maxLength": 200 },
+      "maxItems": 10
+    },
+    "recipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["email"],
+      "properties": {
+        "name": { "type": "string", "maxLength": 200 },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 320,
+          "x-mandatory": true
+        },
+        "role": { "type": "string", "maxLength": 80 }
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+# JSON Schemas live here from Phase 1. Examples (planned):
+#   - incident.behavioural.v1.json
+#   - incident.safeguarding.v1.json
+#   - incident.medication-near-miss.v1.json
+#   - handover.shift-end.v1.json
+#   - note.observation.v1.json
