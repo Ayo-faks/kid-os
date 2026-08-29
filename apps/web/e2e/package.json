@@ -15,6 +15,6 @@
     "@careos/tsconfig": "workspace:*",
     "@playwright/test": "^1.48.2",
     "@types/node": "^22.7.4",
-    "typescript": "^5.6.2"
+    "typescript": "^6.0.3"
   }
 }
