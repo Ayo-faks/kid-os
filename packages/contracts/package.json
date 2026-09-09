@@ -23,6 +23,6 @@
   "devDependencies": {
     "@careos/tsconfig": "workspace:*",
     "typescript": "^5.6.2",
-    "vitest": "^2.1.2"
+    "vitest": "^4.1.11"
   }
 }
