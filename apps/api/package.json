@@ -29,7 +29,7 @@
     "@opentelemetry/sdk-node": "^0.221.0",
     "@prisma/client": "^5.22.0",
     "@temporalio/client": "^1.21.1",
-    "axios": "^1.18.1",
+    "axios": "^1.20.0",
     "fastify": "^5.10.0",
     "ioredis": "^5.10.1",
     "jose": "^6.2.3",
